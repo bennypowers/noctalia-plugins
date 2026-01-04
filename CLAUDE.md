@@ -1,6 +1,7 @@
 ## Adding a New Plugin
 
 - See ./.github/workflows/README.md for instructions
+- see /etc/xdg/quickshell/noctalia-shell/ for upstream widgets and usage
 - Registry is automatically updated via GitHub Actions when manifest.json files are pushed to main
 
 ## Writing Plugins
@@ -55,14 +56,16 @@ DraggableDesktopWidget {
 - Use optional chaining (`pluginApi?.settingName`) when accessing pluginApi to handle null safely
 
 ### Bar Widget Properties
-Bar widgets must declare:
+Bar widgets must declare (properties are injected by Noctalia, not required):
 ```qml
-required property var pluginApi
-required property var screen
-required property string widgetId
-required property string section
-required property string barPosition
+property var pluginApi: null
+property var screen: null
+property string widgetId: ""
+property string section: ""
+property string barPosition: ""
 ```
+
+**IMPORTANT**: Like desktop widgets, bar widget properties are injected at runtime and should NOT use the `required` keyword.
 
 ### Color System
 Access colors through the Color service from `qs.Commons`:
