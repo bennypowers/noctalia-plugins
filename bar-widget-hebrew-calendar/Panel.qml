@@ -57,13 +57,10 @@ Item {
             anchors.margins: Style.marginL
             color: Color.mSurface
             radius: Style.radiusL
-            border.color: Color.mOutline
-            border.width: Style.borderS
 
             ColumnLayout {
                 id: content
                 anchors.fill: parent
-                anchors.margins: Style.marginL
                 spacing: Style.marginL
 
                 // Hebrew Calendar Header
