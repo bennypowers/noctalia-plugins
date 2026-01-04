@@ -60,7 +60,9 @@ Item {
 
             ColumnLayout {
                 id: content
-                anchors.fill: parent
+                x: Style.marginL
+                y: Style.marginL
+                width: parent.width - (Style.marginL * 2)
                 spacing: Style.marginL
 
                 // Hebrew Calendar Header
