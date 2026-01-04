@@ -27,12 +27,41 @@ import qs.Widgets      // Provides widget components
 
 **IMPORTANT**: Do NOT import `Noctalia.Color` or `Noctalia.Style` - these modules don't exist. Use `qs.Commons` instead.
 
-### Required Widget Properties
-Desktop widgets must declare:
+### Desktop Widgets
+Desktop widgets must:
+1. Import `qs.Modules.DesktopWidgets`
+2. Extend `DraggableDesktopWidget` (not Rectangle or Item)
+3. Declare `property var pluginApi: null` (injected by Noctalia, not required)
+4. Define `implicitWidth` and `implicitHeight`
+5. Scale all dimensions by `widgetScale` property (provided by DraggableDesktopWidget)
+
+Example:
+```qml
+import qs.Modules.DesktopWidgets
+
+DraggableDesktopWidget {
+    property var pluginApi: null  // Injected by system
+
+    implicitWidth: Math.round(baseWidth * widgetScale)
+    implicitHeight: Math.round(baseHeight * widgetScale)
+
+    // Content here - scale all dimensions by widgetScale
+}
+```
+
+**IMPORTANT**:
+- Desktop widgets automatically receive `widgetScale`, `widgetData`, `isDragging`, and `isScaling` properties from DraggableDesktopWidget
+- `pluginApi` is NOT a required property - declare it as `property var pluginApi: null` and it will be injected by Noctalia
+- Use optional chaining (`pluginApi?.settingName`) when accessing pluginApi to handle null safely
+
+### Bar Widget Properties
+Bar widgets must declare:
 ```qml
 required property var pluginApi
 required property var screen
 required property string widgetId
+required property string section
+required property string barPosition
 ```
 
 ### Color System
