@@ -4,13 +4,13 @@
     {
       "id": "desktop-widget-thread-bars",
       "name": "CPU Thread Bars",
-      "version": "1.0.0",
-      "author": "bennyp",
+      "version": "1.0.1",
+      "author": "Benny Powers <web@bennypowers.com>",
       "description": "Desktop widget showing CPU usage bars for each thread/core with RAM indicator",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
-      "license": "MIT",
-      "lastUpdated": "2026-01-04T10:16:39+02:00"
+      "license": "GPLv3",
+      "lastUpdated": "2026-01-04T10:23:16+02:00"
     }
   ]
 }
