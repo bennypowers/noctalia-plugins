@@ -1,0 +1,24 @@
+{
+  "id": "bar-widget-hebrew-calendar",
+  "name": "Hebrew Calendar",
+  "version": "1.0.0",
+  "author": "Benny Powers <web@bennypowers.com>",
+  "description": "Display current Hebrew date in the bar",
+  "repository": "https://github.com/bennypowers/noctalia-plugins",
+  "minNoctaliaVersion": "0.1.0",
+  "license": "GPLv3",
+  "entryPoints": {
+    "barWidget": "BarWidget.qml",
+    "settings": "Settings.qml",
+    "panel": "Panel.qml"
+  },
+  "metadata": {
+    "defaultSettings": {
+      "template": "{day} {month}",
+      "city": "Jerusalem",
+      "israeli": true,
+      "language": "he-x-NoNikud",
+      "fontFamily": "Liberation Serif"
+    }
+  }
+}
