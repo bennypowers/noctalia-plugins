@@ -1,8 +1,9 @@
 import QtQuick
+import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
-import Noctalia.Color
-import Noctalia.Style
+import qs.Commons
+import qs.Widgets
 
 Rectangle {
     id: cpuBarWidget
