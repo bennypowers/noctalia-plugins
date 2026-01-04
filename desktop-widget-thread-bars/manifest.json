@@ -1,7 +1,7 @@
 {
   "id": "desktop-widget-thread-bars",
   "name": "CPU Thread Bars",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "Benny Powers <web@bennypowers.com>",
   "description": "Desktop widget showing CPU usage bars for each thread/core with RAM indicator",
   "repository": "https://github.com/bennypowers/noctalia-plugins",

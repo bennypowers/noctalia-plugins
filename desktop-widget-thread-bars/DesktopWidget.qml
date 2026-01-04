@@ -4,14 +4,13 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import qs.Widgets
+import qs.Modules.DesktopWidgets
 
-Rectangle {
+DraggableDesktopWidget {
     id: cpuBarWidget
 
-    // Required properties for Noctalia desktop widget
-    required property var pluginApi
-    required property var screen
-    required property string widgetId
+    // Plugin API property (injected by Noctalia)
+    property var pluginApi: null
 
     // Bar appearance
     property int barHeight: 3
@@ -34,17 +33,14 @@ Rectangle {
     readonly property color highUsageColor: Color.mTertiary        // High usage - warning
     readonly property color criticalUsageColor: Color.mError       // Critical usage - alert
 
-    color: Color.transparent
-
     // Auto-size based on core count
     implicitHeight: {
         if (coreUsages.length === 0)
             return 60;
         var cpuBarsHeight = coreUsages.length * (barHeight + barSpacing);
-        return cpuBarsHeight + ramGap + ramBarHeight + 8;
+        return Math.round((cpuBarsHeight + ramGap + ramBarHeight + 8) * widgetScale);
     }
-    implicitWidth: maxBarWidth + 16
-    radius: 8
+    implicitWidth: Math.round((maxBarWidth + 16) * widgetScale)
 
     Component.onCompleted: {
         console.log("CPU Thread Bars widget loaded");
@@ -54,15 +50,23 @@ Rectangle {
         ramDetailsProcess.running = true;
     }
 
+    // Background container
+    Rectangle {
+        anchors.fill: parent
+        color: Color.mSurface
+        opacity: 0.9
+        radius: Math.round(8 * widgetScale)
+    }
+
     Column {
         anchors.centerIn: parent
         spacing: 0
-        width: maxBarWidth
+        width: Math.round(maxBarWidth * widgetScale)
 
         // CPU bars
         Column {
-            spacing: barSpacing
-            width: maxBarWidth
+            spacing: Math.round(barSpacing * widgetScale)
+            width: Math.round(maxBarWidth * widgetScale)
 
             Repeater {
                 model: cpuBarWidget.coreUsages.length
@@ -70,8 +74,8 @@ Rectangle {
                 delegate: Item {
                     required property int index
 
-                    height: barHeight
-                    width: maxBarWidth
+                    height: Math.round(barHeight * widgetScale)
+                    width: Math.round(maxBarWidth * widgetScale)
 
                     // Background bar
                     Rectangle {
@@ -98,12 +102,12 @@ Rectangle {
                         }
 
                         anchors.right: parent.right
-                        anchors.rightMargin: 1
+                        anchors.rightMargin: Math.round(widgetScale)
                         anchors.verticalCenter: parent.verticalCenter
                         color: usageColor
-                        height: barHeight - 2
-                        radius: 1
-                        width: Math.max(2, (maxBarWidth - 2) * (usage / 100))
+                        height: Math.round((barHeight - 2) * widgetScale)
+                        radius: Math.round(widgetScale)
+                        width: Math.max(Math.round(2 * widgetScale), Math.round((maxBarWidth - 2) * widgetScale * (usage / 100)))
 
                         Behavior on color {
                             ColorAnimation {
@@ -123,14 +127,14 @@ Rectangle {
 
         // Gap before RAM bar
         Item {
-            height: ramGap
-            width: maxBarWidth
+            height: Math.round(ramGap * widgetScale)
+            width: Math.round(maxBarWidth * widgetScale)
         }
 
         // RAM bar
         Item {
-            height: ramBarHeight
-            width: maxBarWidth
+            height: Math.round(ramBarHeight * widgetScale)
+            width: Math.round(maxBarWidth * widgetScale)
 
             // Background bar
             Rectangle {
@@ -156,12 +160,12 @@ Rectangle {
                 }
 
                 anchors.right: parent.right
-                anchors.rightMargin: 1
+                anchors.rightMargin: Math.round(widgetScale)
                 anchors.verticalCenter: parent.verticalCenter
                 color: ramColor
-                height: ramBarHeight - 2
-                radius: 2
-                width: Math.max(2, (maxBarWidth - 2) * (ramUsage / 100))
+                height: Math.round((ramBarHeight - 2) * widgetScale)
+                radius: Math.round(2 * widgetScale)
+                width: Math.max(Math.round(2 * widgetScale), Math.round((maxBarWidth - 2) * widgetScale * (ramUsage / 100)))
 
                 Behavior on color {
                     ColorAnimation {
