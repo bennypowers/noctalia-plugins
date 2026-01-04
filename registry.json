@@ -4,13 +4,13 @@
     {
       "id": "bar-widget-hebrew-calendar",
       "name": "Hebrew Calendar",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": "Benny Powers <web@bennypowers.com>",
       "description": "Display current Hebrew date in the bar",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
-      "lastUpdated": "2026-01-04T13:55:43+02:00"
+      "lastUpdated": "2026-01-04T13:58:25+02:00"
     },
     {
       "id": "desktop-widget-thread-bars",
