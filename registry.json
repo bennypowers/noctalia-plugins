@@ -2,6 +2,17 @@
   "version": 1,
   "plugins": [
     {
+      "id": "bar-widget-hebrew-calendar",
+      "name": "Hebrew Calendar",
+      "version": "1.0.0",
+      "author": "Benny Powers <web@bennypowers.com>",
+      "description": "Display current Hebrew date in the bar",
+      "repository": "https://github.com/bennypowers/noctalia-plugins",
+      "minNoctaliaVersion": "0.1.0",
+      "license": "GPLv3",
+      "lastUpdated": "2026-01-04T13:53:52+02:00"
+    },
+    {
       "id": "desktop-widget-thread-bars",
       "name": "CPU Thread Bars",
       "version": "1.0.3",
