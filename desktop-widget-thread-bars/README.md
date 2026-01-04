@@ -11,9 +11,12 @@ A Noctalia desktop widget that displays CPU usage bars for each thread/core with
   - Tertiary (purple): 50-75% usage
   - Error (red): > 75% usage
 - RAM usage indicator bar
+- **Configurable layouts:**
+  - **Vertical**: Bars grow horizontally (LTR or RTL)
+  - **Horizontal**: Bars grow vertically (TTB or BTT)
 - Smooth animations
 - Draggable and scalable (0.5x - 3x)
-- Auto-sizing based on CPU core count
+- Auto-sizing based on CPU core count and layout
 - Updates every 2 seconds
 
 ## Installation
@@ -26,7 +29,11 @@ A Noctalia desktop widget that displays CPU usage bars for each thread/core with
 ## Usage
 
 - **Drag**: Click and drag the widget to reposition it on your desktop
-- **Scale**: Use the scaling controls in edit mode to resize the widget
+- **Scale**: Use the scaling controls in edit mode to resize the widget (0.5x - 3x)
+- **Configure**: Access plugin settings to customize:
+  - **Layout Orientation**: Vertical or Horizontal
+  - **Vertical Bar Direction**: Left-to-Right (LTR) or Right-to-Left (RTL)
+  - **Horizontal Bar Direction**: Top-to-Bottom (TTB) or Bottom-to-Top (BTT)
 - The widget automatically adapts all dimensions when scaled
 
 ## Technical Details
@@ -40,10 +47,12 @@ A Noctalia desktop widget that displays CPU usage bars for each thread/core with
 
 ## Architecture
 
-- **DesktopWidget.qml**: Main widget extending DraggableDesktopWidget
-- **manifest.json**: Plugin metadata and entry point registration
+- **DesktopWidget.qml**: Main widget extending DraggableDesktopWidget with dual layout components (478 lines)
+- **Settings.qml**: Settings UI for layout orientation configuration with custom toggle buttons (251 lines)
+- **manifest.json**: Plugin metadata, entry points (desktopWidget + settings), and default settings
 - Monitors CPU and RAM using Quickshell Process components
 - Updates every 2 seconds via Timer
+- Dynamic layout switching using QML Loader and Components
 
 ## License
 

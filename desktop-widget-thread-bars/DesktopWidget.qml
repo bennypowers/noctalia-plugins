@@ -12,6 +12,17 @@ DraggableDesktopWidget {
     // Plugin API property (injected by Noctalia)
     property var pluginApi: null
 
+    // Settings (with defaults)
+    readonly property string layout: pluginApi?.pluginSettings?.layout ||
+                                     pluginApi?.manifest?.metadata?.defaultSettings?.layout ||
+                                     "vertical"
+    readonly property string verticalDirection: pluginApi?.pluginSettings?.verticalDirection ||
+                                                pluginApi?.manifest?.metadata?.defaultSettings?.verticalDirection ||
+                                                "ltr"
+    readonly property string horizontalDirection: pluginApi?.pluginSettings?.horizontalDirection ||
+                                                  pluginApi?.manifest?.metadata?.defaultSettings?.horizontalDirection ||
+                                                  "ttb"
+
     // Bar appearance
     property int barHeight: 3
     property int barSpacing: 2
@@ -33,14 +44,34 @@ DraggableDesktopWidget {
     readonly property color highUsageColor: Color.mTertiary        // High usage - warning
     readonly property color criticalUsageColor: Color.mError       // Critical usage - alert
 
-    // Auto-size based on core count
+    // Auto-size based on core count and layout
     implicitHeight: {
         if (coreUsages.length === 0)
-            return 60;
-        var cpuBarsHeight = coreUsages.length * (barHeight + barSpacing);
-        return Math.round((cpuBarsHeight + ramGap + ramBarHeight + 8) * widgetScale);
+            return Math.round(60 * widgetScale);
+
+        if (layout === "horizontal") {
+            // Horizontal: height is bar length, width is number of bars
+            return Math.round((maxBarWidth + 16) * widgetScale);
+        } else {
+            // Vertical: height is number of bars, width is bar length
+            var cpuBarsHeight = coreUsages.length * (barHeight + barSpacing);
+            return Math.round((cpuBarsHeight + ramGap + ramBarHeight + 8) * widgetScale);
+        }
     }
-    implicitWidth: Math.round((maxBarWidth + 16) * widgetScale)
+
+    implicitWidth: {
+        if (coreUsages.length === 0)
+            return Math.round(60 * widgetScale);
+
+        if (layout === "horizontal") {
+            // Horizontal: width is number of bars
+            var cpuBarsWidth = coreUsages.length * (barHeight + barSpacing);
+            return Math.round((cpuBarsWidth + ramGap + ramBarHeight + 8) * widgetScale);
+        } else {
+            // Vertical: width is bar length
+            return Math.round((maxBarWidth + 16) * widgetScale);
+        }
+    }
 
     Component.onCompleted: {
         console.log("CPU Thread Bars widget loaded");
@@ -58,124 +89,278 @@ DraggableDesktopWidget {
         radius: Math.round(8 * widgetScale)
     }
 
-    Column {
+    // Main layout - switches between Row and Column based on layout setting
+    Loader {
         anchors.centerIn: parent
-        spacing: 0
-        width: Math.round(maxBarWidth * widgetScale)
+        sourceComponent: layout === "horizontal" ? horizontalLayout : verticalLayout
+    }
 
-        // CPU bars
+    // Vertical layout component
+    Component {
+        id: verticalLayout
+
         Column {
-            spacing: Math.round(barSpacing * widgetScale)
+            spacing: 0
             width: Math.round(maxBarWidth * widgetScale)
 
-            Repeater {
-                model: cpuBarWidget.coreUsages.length
+            // CPU bars
+            Column {
+                spacing: Math.round(barSpacing * widgetScale)
+                width: Math.round(maxBarWidth * widgetScale)
 
-                delegate: Item {
-                    required property int index
+                Repeater {
+                    model: cpuBarWidget.coreUsages.length
 
-                    height: Math.round(barHeight * widgetScale)
-                    width: Math.round(maxBarWidth * widgetScale)
+                    delegate: Item {
+                        required property int index
 
-                    // Background bar
-                    Rectangle {
-                        anchors.fill: parent
-                        border.color: Color.mOnSurfaceVariant
-                        border.width: 1
-                        color: Color.transparent
-                        opacity: 0.3
-                        radius: 1
-                    }
+                        height: Math.round(barHeight * widgetScale)
+                        width: Math.round(maxBarWidth * widgetScale)
 
-                    // Usage bar
-                    Rectangle {
-                        property real usage: index < cpuBarWidget.coreUsages.length ? cpuBarWidget.coreUsages[index] : 0
-                        property color usageColor: {
-                            if (usage < 25)
-                                return cpuBarWidget.lowUsageColor;
-                            else if (usage < 50)
-                                return cpuBarWidget.mediumUsageColor;
-                            else if (usage < 75)
-                                return cpuBarWidget.highUsageColor;
-                            else
-                                return cpuBarWidget.criticalUsageColor;
+                        // Background bar
+                        Rectangle {
+                            anchors.fill: parent
+                            border.color: Color.mOnSurfaceVariant
+                            border.width: 1
+                            color: Color.transparent
+                            opacity: 0.3
+                            radius: 1
                         }
 
-                        anchors.right: parent.right
-                        anchors.rightMargin: Math.round(widgetScale)
-                        anchors.verticalCenter: parent.verticalCenter
-                        color: usageColor
-                        height: Math.round((barHeight - 2) * widgetScale)
-                        radius: Math.round(widgetScale)
-                        width: Math.max(Math.round(2 * widgetScale), Math.round((maxBarWidth - 2) * widgetScale * (usage / 100)))
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: 200
+                        // Usage bar
+                        Rectangle {
+                            property real usage: index < cpuBarWidget.coreUsages.length ? cpuBarWidget.coreUsages[index] : 0
+                            property color usageColor: {
+                                if (usage < 25)
+                                    return cpuBarWidget.lowUsageColor;
+                                else if (usage < 50)
+                                    return cpuBarWidget.mediumUsageColor;
+                                else if (usage < 75)
+                                    return cpuBarWidget.highUsageColor;
+                                else
+                                    return cpuBarWidget.criticalUsageColor;
                             }
-                        }
-                        Behavior on width {
-                            NumberAnimation {
-                                duration: 300
-                                easing.type: Easing.OutQuad
+
+                            // Direction-based anchoring
+                            anchors.left: verticalDirection === "rtl" ? undefined : parent.left
+                            anchors.leftMargin: verticalDirection === "rtl" ? 0 : Math.round(widgetScale)
+                            anchors.right: verticalDirection === "ltr" ? undefined : parent.right
+                            anchors.rightMargin: verticalDirection === "ltr" ? 0 : Math.round(widgetScale)
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            color: usageColor
+                            height: Math.round((barHeight - 2) * widgetScale)
+                            radius: Math.round(widgetScale)
+                            width: Math.max(Math.round(2 * widgetScale), Math.round((maxBarWidth - 2) * widgetScale * (usage / 100)))
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 200
+                                }
+                            }
+                            Behavior on width {
+                                NumberAnimation {
+                                    duration: 300
+                                    easing.type: Easing.OutQuad
+                                }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // Gap before RAM bar
-        Item {
-            height: Math.round(ramGap * widgetScale)
-            width: Math.round(maxBarWidth * widgetScale)
-        }
-
-        // RAM bar
-        Item {
-            height: Math.round(ramBarHeight * widgetScale)
-            width: Math.round(maxBarWidth * widgetScale)
-
-            // Background bar
-            Rectangle {
-                anchors.fill: parent
-                border.color: Color.mOnSurfaceVariant
-                border.width: 1
-                color: Color.transparent
-                opacity: 0.3
-                radius: 2
+            // Gap before RAM bar
+            Item {
+                height: Math.round(ramGap * widgetScale)
+                width: Math.round(maxBarWidth * widgetScale)
             }
 
-            // Usage bar
-            Rectangle {
-                property color ramColor: {
-                    if (ramUsage < 25)
-                        return cpuBarWidget.lowUsageColor;
-                    else if (ramUsage < 50)
-                        return cpuBarWidget.mediumUsageColor;
-                    else if (ramUsage < 75)
-                        return cpuBarWidget.highUsageColor;
-                    else
-                        return cpuBarWidget.criticalUsageColor;
+            // RAM bar
+            Item {
+                height: Math.round(ramBarHeight * widgetScale)
+                width: Math.round(maxBarWidth * widgetScale)
+
+                // Background bar
+                Rectangle {
+                    anchors.fill: parent
+                    border.color: Color.mOnSurfaceVariant
+                    border.width: 1
+                    color: Color.transparent
+                    opacity: 0.3
+                    radius: 2
                 }
 
-                anchors.right: parent.right
-                anchors.rightMargin: Math.round(widgetScale)
-                anchors.verticalCenter: parent.verticalCenter
-                color: ramColor
-                height: Math.round((ramBarHeight - 2) * widgetScale)
-                radius: Math.round(2 * widgetScale)
-                width: Math.max(Math.round(2 * widgetScale), Math.round((maxBarWidth - 2) * widgetScale * (ramUsage / 100)))
+                // Usage bar
+                Rectangle {
+                    property color ramColor: {
+                        if (ramUsage < 25)
+                            return cpuBarWidget.lowUsageColor;
+                        else if (ramUsage < 50)
+                            return cpuBarWidget.mediumUsageColor;
+                        else if (ramUsage < 75)
+                            return cpuBarWidget.highUsageColor;
+                        else
+                            return cpuBarWidget.criticalUsageColor;
+                    }
 
-                Behavior on color {
-                    ColorAnimation {
-                        duration: 200
+                    // Direction-based anchoring
+                    anchors.left: verticalDirection === "rtl" ? undefined : parent.left
+                    anchors.leftMargin: verticalDirection === "rtl" ? 0 : Math.round(widgetScale)
+                    anchors.right: verticalDirection === "ltr" ? undefined : parent.right
+                    anchors.rightMargin: verticalDirection === "ltr" ? 0 : Math.round(widgetScale)
+                    anchors.verticalCenter: parent.verticalCenter
+
+                    color: ramColor
+                    height: Math.round((ramBarHeight - 2) * widgetScale)
+                    radius: Math.round(2 * widgetScale)
+                    width: Math.max(Math.round(2 * widgetScale), Math.round((maxBarWidth - 2) * widgetScale * (ramUsage / 100)))
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 200
+                        }
+                    }
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: 300
+                            easing.type: Easing.OutQuad
+                        }
                     }
                 }
-                Behavior on width {
-                    NumberAnimation {
-                        duration: 300
-                        easing.type: Easing.OutQuad
+            }
+        }
+    }
+
+    // Horizontal layout component
+    Component {
+        id: horizontalLayout
+
+        Row {
+            spacing: 0
+            height: Math.round(maxBarWidth * widgetScale)
+
+            // CPU bars
+            Row {
+                spacing: Math.round(barSpacing * widgetScale)
+                height: Math.round(maxBarWidth * widgetScale)
+
+                Repeater {
+                    model: cpuBarWidget.coreUsages.length
+
+                    delegate: Item {
+                        required property int index
+
+                        width: Math.round(barHeight * widgetScale)
+                        height: Math.round(maxBarWidth * widgetScale)
+
+                        // Background bar
+                        Rectangle {
+                            anchors.fill: parent
+                            border.color: Color.mOnSurfaceVariant
+                            border.width: 1
+                            color: Color.transparent
+                            opacity: 0.3
+                            radius: 1
+                        }
+
+                        // Usage bar
+                        Rectangle {
+                            property real usage: index < cpuBarWidget.coreUsages.length ? cpuBarWidget.coreUsages[index] : 0
+                            property color usageColor: {
+                                if (usage < 25)
+                                    return cpuBarWidget.lowUsageColor;
+                                else if (usage < 50)
+                                    return cpuBarWidget.mediumUsageColor;
+                                else if (usage < 75)
+                                    return cpuBarWidget.highUsageColor;
+                                else
+                                    return cpuBarWidget.criticalUsageColor;
+                            }
+
+                            // Direction-based anchoring
+                            anchors.top: horizontalDirection === "btt" ? undefined : parent.top
+                            anchors.topMargin: horizontalDirection === "btt" ? 0 : Math.round(widgetScale)
+                            anchors.bottom: horizontalDirection === "ttb" ? undefined : parent.bottom
+                            anchors.bottomMargin: horizontalDirection === "ttb" ? 0 : Math.round(widgetScale)
+                            anchors.horizontalCenter: parent.horizontalCenter
+
+                            color: usageColor
+                            width: Math.round((barHeight - 2) * widgetScale)
+                            radius: Math.round(widgetScale)
+                            height: Math.max(Math.round(2 * widgetScale), Math.round((maxBarWidth - 2) * widgetScale * (usage / 100)))
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: 200
+                                }
+                            }
+                            Behavior on height {
+                                NumberAnimation {
+                                    duration: 300
+                                    easing.type: Easing.OutQuad
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Gap before RAM bar
+            Item {
+                width: Math.round(ramGap * widgetScale)
+                height: Math.round(maxBarWidth * widgetScale)
+            }
+
+            // RAM bar
+            Item {
+                width: Math.round(ramBarHeight * widgetScale)
+                height: Math.round(maxBarWidth * widgetScale)
+
+                // Background bar
+                Rectangle {
+                    anchors.fill: parent
+                    border.color: Color.mOnSurfaceVariant
+                    border.width: 1
+                    color: Color.transparent
+                    opacity: 0.3
+                    radius: 2
+                }
+
+                // Usage bar
+                Rectangle {
+                    property color ramColor: {
+                        if (ramUsage < 25)
+                            return cpuBarWidget.lowUsageColor;
+                        else if (ramUsage < 50)
+                            return cpuBarWidget.mediumUsageColor;
+                        else if (ramUsage < 75)
+                            return cpuBarWidget.highUsageColor;
+                        else
+                            return cpuBarWidget.criticalUsageColor;
+                    }
+
+                    // Direction-based anchoring
+                    anchors.top: horizontalDirection === "btt" ? undefined : parent.top
+                    anchors.topMargin: horizontalDirection === "btt" ? 0 : Math.round(widgetScale)
+                    anchors.bottom: horizontalDirection === "ttb" ? undefined : parent.bottom
+                    anchors.bottomMargin: horizontalDirection === "ttb" ? 0 : Math.round(widgetScale)
+                    anchors.horizontalCenter: parent.horizontalCenter
+
+                    color: ramColor
+                    width: Math.round((ramBarHeight - 2) * widgetScale)
+                    radius: Math.round(2 * widgetScale)
+                    height: Math.max(Math.round(2 * widgetScale), Math.round((maxBarWidth - 2) * widgetScale * (ramUsage / 100)))
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 200
+                        }
+                    }
+                    Behavior on height {
+                        NumberAnimation {
+                            duration: 300
+                            easing.type: Easing.OutQuad
+                        }
                     }
                 }
             }
