@@ -193,9 +193,14 @@ Rectangle {
         hebcalProcess.running = true;
     }
 
-    color: "transparent"
-    implicitHeight: barIsVertical ? dateText.implicitHeight : Style.barHeight
-    implicitWidth: barIsVertical ? Style.barHeight : dateText.implicitWidth
+    // Capsule styling to match built-in widgets
+    radius: Style.radiusS
+    color: Style.capsuleColor
+    border.color: Style.capsuleBorderColor
+    border.width: Style.capsuleBorderWidth
+
+    implicitHeight: barIsVertical ? Math.round(dateText.implicitHeight + Style.marginS * 2) : Style.capsuleHeight
+    implicitWidth: barIsVertical ? Style.capsuleHeight : Math.round(dateText.implicitWidth + Style.marginM * 2)
 
     Component.onCompleted: {
         console.log("Hebrew Calendar bar widget loaded");
