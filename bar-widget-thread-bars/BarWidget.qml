@@ -40,29 +40,19 @@ Rectangle {
     readonly property color highUsageColor: Color.mTertiary
     readonly property color criticalUsageColor: Color.mError
 
-    color: "transparent"
-    implicitHeight: barIsVertical ? contentColumn.implicitHeight : Style.barHeight
-    implicitWidth: barIsVertical ? Style.barHeight : contentColumn.implicitWidth
+    // Capsule styling to match built-in widgets
+    radius: Style.radiusS
+    color: Style.capsuleColor
+    border.color: Style.capsuleBorderColor
+    border.width: Style.capsuleBorderWidth
+
+    implicitHeight: barIsVertical ? Math.round(contentColumn.implicitHeight + Style.marginS * 2) : Style.capsuleHeight
+    implicitWidth: barIsVertical ? Style.capsuleHeight : Math.round(contentColumn.implicitWidth + Style.marginM * 2)
 
     Component.onCompleted: {
         console.log("CPU Thread Bars bar widget loaded");
         cpuProcess.running = true;
         coreProcess.running = true;
-    }
-
-    // Background with hover effect
-    Rectangle {
-        anchors.fill: contentColumn
-        anchors.margins: -4
-        color: mouseArea.containsMouse ? Color.mSurfaceVariant : "transparent"
-        opacity: mouseArea.containsMouse ? 0.5 : 0
-        radius: Style.radiusM
-
-        Behavior on opacity {
-            NumberAnimation {
-                duration: 150
-            }
-        }
     }
 
     // Main content - CPU thread bars

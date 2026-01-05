@@ -1,7 +1,7 @@
 {
   "id": "bar-widget-thread-bars",
   "name": "CPU Thread Bars (Bar Widget)",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Benny Powers <web@bennypowers.com>",
   "description": "Bar widget showing compact CPU usage bars for each thread/core. Click to view detailed system performance metrics in a panel.",
   "repository": "https://github.com/bennypowers/noctalia-plugins",
