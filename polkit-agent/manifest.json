@@ -1,0 +1,14 @@
+{
+  "id": "polkit-agent",
+  "name": "Polkit Authentication Agent",
+  "version": "1.0.0",
+  "author": "Benny Powers <web@bennypowers.com>",
+  "description": "System authentication agent for polkit using quickshell-polkit-agent",
+  "repository": "https://github.com/bennypowers/noctalia-plugins",
+  "minNoctaliaVersion": "0.1.0",
+  "license": "GPLv3",
+  "entryPoints": {
+    "main": "Main.qml",
+    "panel": "Panel.qml"
+  }
+}
