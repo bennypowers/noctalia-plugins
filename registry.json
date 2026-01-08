@@ -4,13 +4,13 @@
     {
       "id": "bar-widget-hebrew-calendar",
       "name": "Hebrew Calendar",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "author": "Benny Powers <web@bennypowers.com>",
       "description": "Display current Hebrew date in the bar",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
-      "lastUpdated": "2026-01-05T19:42:58+02:00"
+      "lastUpdated": "2026-01-08T11:40:27+02:00"
     },
     {
       "id": "bar-widget-thread-bars",
@@ -33,6 +33,17 @@
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
       "lastUpdated": "2026-01-04T10:43:50+02:00"
+    },
+    {
+      "id": "polkit-agent",
+      "name": "Polkit Authentication Agent",
+      "version": "1.0.0",
+      "author": "Benny Powers <web@bennypowers.com>",
+      "description": "System authentication agent for polkit using quickshell-polkit-agent",
+      "repository": "https://github.com/bennypowers/noctalia-plugins",
+      "minNoctaliaVersion": "0.1.0",
+      "license": "GPLv3",
+      "lastUpdated": "2026-01-08T11:40:36+02:00"
     }
   ]
 }
