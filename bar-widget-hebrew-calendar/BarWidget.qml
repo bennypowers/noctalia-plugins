@@ -58,7 +58,6 @@ Rectangle {
         // Get first line only
         cmd += " | head -1";
 
-        console.log("Hebrew Calendar: Running command:", cmd);
         return cmd;
     }
     function convertMonthToHebrew(englishMonth) {
@@ -88,8 +87,10 @@ Rectangle {
             return num.toString();
 
         // Special cases for 15 and 16 to avoid writing God's name (יה and יו)
-        if (num === 15) return "ט״ו";  // tet-vav (9+6) instead of yod-hey (10+5)
-        if (num === 16) return "ט״ז";  // tet-zayin (9+7) instead of yod-vav (10+6)
+        if (num === 15)
+            return "ט״ו";  // tet-vav (9+6) instead of yod-hey (10+5)
+        if (num === 16)
+            return "ט״ז";  // tet-zayin (9+7) instead of yod-vav (10+6)
 
         var tensDigit = Math.floor(num / 10);
         var onesDigit = num % 10;
@@ -144,8 +145,6 @@ Rectangle {
         // Example English output: "Sunday, 4 Tevet 5785"
         // Example Ashkenazi: "Shushan Purim, 15 Adar II 5784"
 
-        console.log("Hebrew Calendar: Parsing hebcal output:", output);
-
         // Check if it's Hebrew output (contains Hebrew characters)
         var isHebrew = /[\u0590-\u05FF]/.test(output);
 
@@ -165,10 +164,6 @@ Rectangle {
                 root.hebrewDay = parts[1];
                 root.hebrewMonth = parts[2];
                 root.hebrewYear = parts[3];
-
-                console.log("Hebrew Calendar: Parsed Hebrew -", "weekday:", root.hebrewWeekday, "day:", root.hebrewDay, "month:", root.hebrewMonth, "year:", root.hebrewYear);
-            } else {
-                console.log("Hebrew Calendar: Unexpected Hebrew format, got", parts.length, "parts:", output);
             }
         } else {
             // Parse English format from hebcal -T -w: "Sun, 15th of Tevet, 5786"
@@ -182,8 +177,6 @@ Rectangle {
                 root.hebrewDay = convertToHebrewNumeral(dayNum);
                 root.hebrewMonth = convertMonthToHebrew(match[3].trim());
                 root.hebrewYear = convertYearToHebrew(match[4]);
-
-                console.log("Hebrew Calendar: Parsed English -", "weekday:", root.hebrewWeekday, "day:", root.hebrewDay, "month:", root.hebrewMonth, "year:", root.hebrewYear);
             } else {
                 console.log("Hebrew Calendar: Failed to match date pattern in:", output);
             }
@@ -193,18 +186,16 @@ Rectangle {
         hebcalProcess.running = true;
     }
 
-    // Capsule styling to match built-in widgets
-    radius: Style.radiusS
-    color: Style.capsuleColor
     border.color: Style.capsuleBorderColor
     border.width: Style.capsuleBorderWidth
-
+    color: Style.capsuleColor
     implicitHeight: barIsVertical ? Math.round(dateText.implicitHeight + Style.marginS * 2) : Style.capsuleHeight
     implicitWidth: barIsVertical ? Style.capsuleHeight : Math.round(dateText.implicitWidth + Style.marginM * 2)
 
+    // Capsule styling to match built-in widgets
+    radius: Style.radiusS
+
     Component.onCompleted: {
-        console.log("Hebrew Calendar bar widget loaded");
-        console.log("Settings - city:", city, "israeli:", israeli, "language:", language, "template:", displayTemplate, "font:", fontFamily);
         updateHebrewDate();
     }
 
@@ -219,15 +210,14 @@ Rectangle {
         pointSize: Style.fontSizeM
         text: {
             var result = formatDate();
-            console.log("Hebrew Calendar: Displaying text:", result, "length:", result.length);
             return result || "---"; // Show placeholder if empty
         }
 
         // Click to open panel
         MouseArea {
             anchors.fill: parent
-            hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
+            hoverEnabled: true
 
             onClicked: {
                 if (pluginApi) {
@@ -262,7 +252,6 @@ Rectangle {
         stdout: SplitParser {
             onRead: function (data) {
                 try {
-                    console.log("Hebrew Calendar: Raw hebcal output:", data);
                     if (data && data.trim()) {
                         parseHebrewDate(data.trim());
                     } else {
@@ -275,7 +264,9 @@ Rectangle {
         }
 
         onExited: function (exitCode, exitStatus) {
-            console.log("Hebrew Calendar: hebcal exited with code:", exitCode, "status:", exitStatus);
+            if (exitCode !== 0) {
+                console.log("Hebrew Calendar: hebcal exited with code:", exitCode, "status:", exitStatus);
+            }
         }
     }
 }
