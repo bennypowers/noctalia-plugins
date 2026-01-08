@@ -18,9 +18,9 @@ Item {
     readonly property bool panelAnchorHorizontalCenter: true
     readonly property bool panelAnchorVerticalCenter: true
 
-    // SmartPanel sizing
+    // SmartPanel sizing - width fixed, height dynamic based on content
     property real contentPreferredWidth: Math.round(420 * Style.uiScaleRatio)
-    property real contentPreferredHeight: Math.round(340 * Style.uiScaleRatio)
+    property real contentPreferredHeight: contentColumn.implicitHeight + Style.marginL * 2
 
     // Geometry placeholder for SmartPanel background rendering
     readonly property var geometryPlaceholder: panelContainer
@@ -54,8 +54,10 @@ Item {
         color: Color.transparent
 
         ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: Style.marginL
+            id: contentColumn
+            width: parent.width - Style.marginL * 2
+            x: Style.marginL
+            y: Style.marginL
             spacing: Style.marginM
 
             // Header
@@ -195,8 +197,6 @@ Item {
                     color: Color.mOnTertiary
                 }
             }
-
-            Item { Layout.fillHeight: true }
 
             // Buttons
             RowLayout {
