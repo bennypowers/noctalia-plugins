@@ -2,6 +2,9 @@
 
 A Noctalia plugin that provides a polkit authentication UI using [quickshell-polkit-agent](https://github.com/bennypowers/quickshell-polkit-agent).
 
+<img width="5119" height="2160" alt="Screenshot from 2026-01-08 11-46-13-min" src="https://github.com/user-attachments/assets/23af7066-3d7c-4610-9f8f-78f0167e74da" />
+
+
 ## Requirements
 
 - [quickshell-polkit-agent](https://github.com/bennypowers/quickshell-polkit-agent) daemon must be running
