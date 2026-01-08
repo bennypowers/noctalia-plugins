@@ -48,6 +48,14 @@ Item {
         passwordInput.forceActiveFocus()
     }
 
+    // Cancel authorization when panel is closed/unloaded (e.g., via Escape)
+    Component.onDestruction: {
+        console.log("[polkit-agent] Panel unloading, cancelling if still authenticating")
+        if (main?.isAuthenticating) {
+            main.cancelAuthorization()
+        }
+    }
+
     Rectangle {
         id: panelContainer
         anchors.fill: parent
