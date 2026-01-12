@@ -74,7 +74,8 @@ Access colors through the Color service from `qs.Commons`:
 - `Color.mOnSurface`, `Color.mOnSurfaceVariant` - Text colors
 - `Color.mSurface`, `Color.mSurfaceVariant` - Background colors
 - `Color.mOutline` - Border colors
-- `Color.transparent`, `Color.black`, `Color.white` - Absolute colors
+
+**Note:** Use Qt color strings like `"transparent"`, `"black"`, `"white"` for absolute colors (not `Color.transparent` etc.)
 
 See https://github.com/noctalia-dev/noctalia-shell/blob/main/Commons/Color.qml for full color palette.
 

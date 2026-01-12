@@ -12,10 +12,9 @@ Item {
     property var screen: null
 
     // SmartPanel properties
-    readonly property var geometryPlaceholder: panelContainer
     readonly property bool allowAttach: true
     property real contentPreferredWidth: 350 * Style.uiScaleRatio
-    property real contentPreferredHeight: content.implicitHeight + (Style.marginL * 4)
+    property real contentPreferredHeight: content.implicitHeight + (Style.marginL * 2)
 
     // Settings
     readonly property int updateInterval: pluginApi?.pluginSettings?.updateInterval ||
@@ -133,106 +132,92 @@ Item {
         }
     }
 
-    Rectangle {
-        id: panelContainer
+    ColumnLayout {
+        id: content
         anchors.fill: parent
-        color: Color.transparent
+        anchors.margins: Style.marginL
+        spacing: Style.marginM
 
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: Style.marginL
-            color: Color.mSurface
-            radius: Style.radiusL
+        // Header
+        NText {
+            Layout.fillWidth: true
+            font.weight: Style.fontWeightBold
+            pointSize: Style.fontSizeL
+            text: "Background Apps"
+        }
 
-            ColumnLayout {
-                id: content
-                x: Style.marginL
-                y: Style.marginL
-                width: parent.width - (Style.marginL * 2)
-                spacing: Style.marginM
+        // Empty state
+        NText {
+            Layout.fillWidth: true
+            visible: root.backgroundApps.length === 0
+            color: Color.mOnSurfaceVariant
+            pointSize: Style.fontSizeM
+            text: "No background apps running"
+        }
 
-                // Header
-                NText {
+        // App list
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: Style.marginS
+            visible: root.backgroundApps.length > 0
+
+            Repeater {
+                model: root.backgroundApps
+
+                delegate: Rectangle {
+                    required property var modelData
+                    required property int index
+
                     Layout.fillWidth: true
-                    font.weight: Style.fontWeightBold
-                    pointSize: Style.fontSizeL
-                    text: "Background Apps"
-                }
+                    height: appRow.implicitHeight + Style.marginS * 2
+                    color: mouseArea.containsMouse ? Color.mSurfaceVariant : "transparent"
+                    radius: Style.radiusM
 
-                // Empty state
-                NText {
-                    Layout.fillWidth: true
-                    visible: root.backgroundApps.length === 0
-                    color: Color.mOnSurfaceVariant
-                    pointSize: Style.fontSizeM
-                    text: "No background apps running"
-                }
+                    property var appInfo: root.getAppInfo(modelData.appId)
 
-                // App list
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: Style.marginS
-                    visible: root.backgroundApps.length > 0
+                    RowLayout {
+                        id: appRow
+                        anchors.fill: parent
+                        anchors.margins: Style.marginS
+                        spacing: Style.marginM
 
-                    Repeater {
-                        model: root.backgroundApps
+                        IconImage {
+                            Layout.preferredWidth: 32
+                            Layout.preferredHeight: 32
+                            source: appInfo.icon
+                            asynchronous: true
+                        }
 
-                        delegate: Rectangle {
-                            required property var modelData
-                            required property int index
-
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            height: appRow.implicitHeight + Style.marginS * 2
-                            color: mouseArea.containsMouse ? Color.mSurfaceVariant : Color.transparent
-                            radius: Style.radiusM
+                            spacing: 2
 
-                            property var appInfo: root.getAppInfo(modelData.appId)
-
-                            RowLayout {
-                                id: appRow
-                                anchors.fill: parent
-                                anchors.margins: Style.marginS
-                                spacing: Style.marginM
-
-                                IconImage {
-                                    Layout.preferredWidth: 32
-                                    Layout.preferredHeight: 32
-                                    source: appInfo.icon
-                                    asynchronous: true
-                                }
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 2
-
-                                    NText {
-                                        Layout.fillWidth: true
-                                        pointSize: Style.fontSizeM
-                                        text: appInfo.name
-                                        elide: Text.ElideRight
-                                    }
-
-                                    NText {
-                                        Layout.fillWidth: true
-                                        visible: modelData.message && modelData.message.length > 0
-                                        color: Color.mOnSurfaceVariant
-                                        pointSize: Style.fontSizeS
-                                        text: modelData.message || ""
-                                        elide: Text.ElideRight
-                                    }
-                                }
+                            NText {
+                                Layout.fillWidth: true
+                                pointSize: Style.fontSizeM
+                                text: appInfo.name
+                                elide: Text.ElideRight
                             }
 
-                            MouseArea {
-                                id: mouseArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-
-                                onClicked: {
-                                    root.activateApp(modelData.appId);
-                                }
+                            NText {
+                                Layout.fillWidth: true
+                                visible: modelData.message && modelData.message.length > 0
+                                color: Color.mOnSurfaceVariant
+                                pointSize: Style.fontSizeS
+                                text: modelData.message || ""
+                                elide: Text.ElideRight
                             }
+                        }
+                    }
+
+                    MouseArea {
+                        id: mouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+
+                        onClicked: {
+                            root.activateApp(modelData.appId);
                         }
                     }
                 }

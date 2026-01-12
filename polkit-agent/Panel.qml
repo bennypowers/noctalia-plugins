@@ -22,9 +22,6 @@ Item {
     property real contentPreferredWidth: Math.round(420 * Style.uiScaleRatio)
     property real contentPreferredHeight: contentColumn.implicitHeight + Style.marginL * 2
 
-    // Geometry placeholder for SmartPanel background rendering
-    readonly property var geometryPlaceholder: panelContainer
-
     // Keyboard handler for escape to cancel
     function onEscapePressed() {
         cancel()
@@ -56,17 +53,11 @@ Item {
         }
     }
 
-    Rectangle {
-        id: panelContainer
+    ColumnLayout {
+        id: contentColumn
         anchors.fill: parent
-        color: Color.transparent
-
-        ColumnLayout {
-            id: contentColumn
-            width: parent.width - Style.marginL * 2
-            x: Style.marginL
-            y: Style.marginL
-            spacing: Style.marginM
+        anchors.margins: Style.marginL
+        spacing: Style.marginM
 
             // Header
             RowLayout {
@@ -226,5 +217,4 @@ Item {
                 }
             }
         }
-    }
 }

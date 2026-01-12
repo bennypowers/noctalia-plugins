@@ -1,7 +1,7 @@
 {
   "id": "bar-widget-background-apps",
   "name": "Background Apps",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": "Benny Powers",
   "description": "Display Freedesktop background apps (like Pika Backup) in the bar",
   "repository": "https://github.com/bennypowers/noctalia-plugins",

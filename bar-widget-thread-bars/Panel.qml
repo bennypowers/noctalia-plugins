@@ -11,10 +11,9 @@ Item {
     property var screen: null
 
     // SmartPanel properties
-    readonly property var geometryPlaceholder: panelContainer
     readonly property bool allowAttach: true
     property real contentPreferredWidth: 420 * Style.uiScaleRatio
-    property real contentPreferredHeight: content.implicitHeight + (Style.marginL * 4)
+    property real contentPreferredHeight: content.implicitHeight + (Style.marginL * 2)
 
     // Settings
     readonly property int updateInterval: pluginApi?.pluginSettings?.updateInterval ||
@@ -39,164 +38,150 @@ Item {
         topProcessesProcess.running = true;
     }
 
-    Rectangle {
-        id: panelContainer
+    ColumnLayout {
+        id: content
         anchors.fill: parent
-        color: Color.transparent
+        anchors.margins: Style.marginL
+        spacing: Style.marginM
 
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: Style.marginL
-            color: Color.mSurface
-            radius: Style.radiusL
+        // Header
+        NText {
+            Layout.fillWidth: true
+            font.weight: Style.fontWeightBold
+            pointSize: Style.fontSizeL
+            text: "CPU Monitor"
+        }
 
-            ColumnLayout {
-                id: content
-                x: Style.marginL
-                y: Style.marginL
-                width: parent.width - (Style.marginL * 2)
-                spacing: Style.marginM
+        // Overall CPU Usage
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 4
 
-                // Header
-                NText {
-                    Layout.fillWidth: true
-                    font.weight: Style.fontWeightBold
-                    pointSize: Style.fontSizeL
-                    text: "CPU Monitor"
-                }
+            NText {
+                color: Color.mOnSurfaceVariant
+                pointSize: Style.fontSizeXS
+                text: "OVERALL CPU"
+            }
 
-                // Overall CPU Usage
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
+            NText {
+                font.weight: Style.fontWeightBold
+                pointSize: Style.fontSizeL + 6
+                text: `${Math.round(root.cpuUsage)}%`
+            }
+        }
 
-                    NText {
-                        color: Color.mOnSurfaceVariant
-                        pointSize: Style.fontSizeXS
-                        text: "OVERALL CPU"
-                    }
+        // Per-core usage
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 4
 
-                    NText {
-                        font.weight: Style.fontWeightBold
-                        pointSize: Style.fontSizeL + 6
-                        text: `${Math.round(root.cpuUsage)}%`
-                    }
-                }
+            NText {
+                color: Color.mOnSurfaceVariant
+                pointSize: Style.fontSizeM
+                text: "Per-Core Usage"
+            }
 
-                // Per-core usage
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
+            Grid {
+                Layout.fillWidth: true
+                columns: 4
+                columnSpacing: Style.marginM
+                rowSpacing: Style.marginS
 
-                    NText {
-                        color: Color.mOnSurfaceVariant
-                        pointSize: Style.fontSizeM
-                        text: "Per-Core Usage"
-                    }
+                Repeater {
+                    model: root.coreUsages.length
 
-                    Grid {
-                        Layout.fillWidth: true
-                        columns: 4
-                        columnSpacing: Style.marginM
-                        rowSpacing: Style.marginS
+                    delegate: RowLayout {
+                        required property int index
 
-                        Repeater {
-                            model: root.coreUsages.length
+                        spacing: 4
 
-                            delegate: RowLayout {
-                                required property int index
+                        NText {
+                            color: Color.mOnSurfaceVariant
+                            pointSize: Style.fontSizeS
+                            text: `${index}:`
+                            Layout.minimumWidth: 20
+                        }
 
-                                spacing: 4
-
-                                NText {
-                                    color: Color.mOnSurfaceVariant
-                                    pointSize: Style.fontSizeS
-                                    text: `${index}:`
-                                    Layout.minimumWidth: 20
-                                }
-
-                                NText {
-                                    property real usage: index < root.coreUsages.length ? root.coreUsages[index] : 0
-                                    property color usageColor: {
-                                        if (usage < 25)
-                                            return Color.mPrimary;
-                                        else if (usage < 50)
-                                            return Color.mSecondary;
-                                        else if (usage < 75)
-                                            return Color.mTertiary;
-                                        else
-                                            return Color.mError;
-                                    }
-
-                                    color: usageColor
-                                    pointSize: Style.fontSizeS
-                                    text: `${Math.round(usage)}%`
-                                    Layout.minimumWidth: 35
-                                }
+                        NText {
+                            property real usage: index < root.coreUsages.length ? root.coreUsages[index] : 0
+                            property color usageColor: {
+                                if (usage < 25)
+                                    return Color.mPrimary;
+                                else if (usage < 50)
+                                    return Color.mSecondary;
+                                else if (usage < 75)
+                                    return Color.mTertiary;
+                                else
+                                    return Color.mError;
                             }
+
+                            color: usageColor
+                            pointSize: Style.fontSizeS
+                            text: `${Math.round(usage)}%`
+                            Layout.minimumWidth: 35
                         }
                     }
                 }
+            }
+        }
 
-                // Top Processes
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 4
+        // Top Processes
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 4
 
-                    NText {
-                        color: Color.mOnSurfaceVariant
-                        pointSize: Style.fontSizeM
-                        text: "Top Processes"
-                    }
+            NText {
+                color: Color.mOnSurfaceVariant
+                pointSize: Style.fontSizeM
+                text: "Top Processes"
+            }
 
-                    ColumnLayout {
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: Style.marginXS
+
+                Repeater {
+                    model: root.topProcesses
+
+                    delegate: RowLayout {
+                        required property var modelData
+
                         Layout.fillWidth: true
-                        spacing: Style.marginXS
+                        spacing: Style.marginS
 
-                        Repeater {
-                            model: root.topProcesses
-
-                            delegate: RowLayout {
-                                required property var modelData
-
-                                Layout.fillWidth: true
-                                spacing: Style.marginS
-
-                                NText {
-                                    property color cpuColor: {
-                                        var cpu = parseFloat(modelData.cpu);
-                                        if (cpu < 25)
-                                            return Color.mPrimary;
-                                        else if (cpu < 50)
-                                            return Color.mSecondary;
-                                        else if (cpu < 75)
-                                            return Color.mTertiary;
-                                        else
-                                            return Color.mError;
-                                    }
-
-                                    color: cpuColor
-                                    pointSize: Style.fontSizeS
-                                    text: `${modelData.cpu}%`
-                                    Layout.minimumWidth: 45
-                                    horizontalAlignment: Text.AlignRight
-                                }
-
-                                NText {
-                                    color: Color.mOnSurfaceVariant
-                                    pointSize: Style.fontSizeXS
-                                    text: modelData.user
-                                    Layout.minimumWidth: 60
-                                    elide: Text.ElideRight
-                                }
-
-                                NText {
-                                    Layout.fillWidth: true
-                                    pointSize: Style.fontSizeS
-                                    text: modelData.command
-                                    elide: Text.ElideRight
-                                }
+                        NText {
+                            property color cpuColor: {
+                                var cpu = parseFloat(modelData.cpu);
+                                if (cpu < 25)
+                                    return Color.mPrimary;
+                                else if (cpu < 50)
+                                    return Color.mSecondary;
+                                else if (cpu < 75)
+                                    return Color.mTertiary;
+                                else
+                                    return Color.mError;
                             }
+
+                            color: cpuColor
+                            pointSize: Style.fontSizeS
+                            text: `${modelData.cpu}%`
+                            Layout.minimumWidth: 45
+                            horizontalAlignment: Text.AlignRight
+                        }
+
+                        NText {
+                            color: Color.mOnSurfaceVariant
+                            pointSize: Style.fontSizeXS
+                            text: modelData.user
+                            Layout.minimumWidth: 60
+                            elide: Text.ElideRight
+                        }
+
+                        NText {
+                            Layout.fillWidth: true
+                            pointSize: Style.fontSizeS
+                            text: modelData.command
+                            elide: Text.ElideRight
                         }
                     }
                 }

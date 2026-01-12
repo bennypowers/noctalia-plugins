@@ -122,7 +122,7 @@ DraggableDesktopWidget {
                             anchors.fill: parent
                             border.color: Color.mOnSurfaceVariant
                             border.width: 1
-                            color: Color.transparent
+                            color: "transparent"
                             opacity: 0.3
                             radius: 1
                         }
@@ -185,7 +185,7 @@ DraggableDesktopWidget {
                     anchors.fill: parent
                     border.color: Color.mOnSurfaceVariant
                     border.width: 1
-                    color: Color.transparent
+                    color: "transparent"
                     opacity: 0.3
                     radius: 2
                 }
@@ -258,7 +258,7 @@ DraggableDesktopWidget {
                             anchors.fill: parent
                             border.color: Color.mOnSurfaceVariant
                             border.width: 1
-                            color: Color.transparent
+                            color: "transparent"
                             opacity: 0.3
                             radius: 1
                         }
@@ -321,7 +321,7 @@ DraggableDesktopWidget {
                     anchors.fill: parent
                     border.color: Color.mOnSurfaceVariant
                     border.width: 1
-                    color: Color.transparent
+                    color: "transparent"
                     opacity: 0.3
                     radius: 2
                 }

@@ -11,10 +11,9 @@ Item {
     property var screen: null
 
     // SmartPanel properties
-    readonly property var geometryPlaceholder: panelContainer
     readonly property bool allowAttach: true
     property real contentPreferredWidth: 420 * Style.uiScaleRatio
-    property real contentPreferredHeight: content.implicitHeight + (Style.marginL * 4)
+    property real contentPreferredHeight: content.implicitHeight + (Style.marginL * 2)
 
     // Settings
     readonly property string city: pluginApi?.pluginSettings?.city || pluginApi?.manifest?.metadata?.defaultSettings?.city || "Jerusalem"
@@ -47,62 +46,48 @@ Item {
         loadWeeklyData();
     }
 
-    Rectangle {
-        id: panelContainer
+    ColumnLayout {
+        id: content
         anchors.fill: parent
-        color: Color.transparent
+        anchors.margins: Style.marginL
+        spacing: Style.marginL
 
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: Style.marginL
-            color: Color.mSurface
-            radius: Style.radiusL
+        // Hebrew Calendar Header
+        HebrewCalendarHeaderCard {
+            Layout.fillWidth: true
+            dafYomi: root.dafYomi
+            fontFamily: root.fontFamily
+            hebrewDay: root.currentHebrewDay
+            hebrewMonth: root.currentHebrewMonth
+            hebrewWeekday: root.currentWeekday
+            hebrewYear: root.currentHebrewYear
+        }
 
-            ColumnLayout {
-                id: content
-                x: Style.marginL
-                y: Style.marginL
-                width: parent.width - (Style.marginL * 2)
-                spacing: Style.marginL
+        // Calendar Month
+        HebrewCalendarMonthCard {
+            Layout.fillWidth: true
+            firstDayOfWeek: root.firstDayOfWeek
+            fontFamily: root.fontFamily
+            hebrewDay: root.currentHebrewDay
+            hebrewMonth: root.currentHebrewMonth
+            hebrewYear: root.currentHebrewYear
+            monthLength: root.monthLength
+        }
 
-                // Hebrew Calendar Header
-                HebrewCalendarHeaderCard {
-                    Layout.fillWidth: true
-                    dafYomi: root.dafYomi
-                    fontFamily: root.fontFamily
-                    hebrewDay: root.currentHebrewDay
-                    hebrewMonth: root.currentHebrewMonth
-                    hebrewWeekday: root.currentWeekday
-                    hebrewYear: root.currentHebrewYear
-                }
+        // Zmanim
+        ZmanimCard {
+            Layout.fillWidth: true
+            fontFamily: root.fontFamily
+            zmanimList: root.zmanimList
+        }
 
-                // Calendar Month
-                HebrewCalendarMonthCard {
-                    Layout.fillWidth: true
-                    firstDayOfWeek: root.firstDayOfWeek
-                    fontFamily: root.fontFamily
-                    hebrewDay: root.currentHebrewDay
-                    hebrewMonth: root.currentHebrewMonth
-                    hebrewYear: root.currentHebrewYear
-                    monthLength: root.monthLength
-                }
-
-                // Zmanim
-                ZmanimCard {
-                    Layout.fillWidth: true
-                    fontFamily: root.fontFamily
-                    zmanimList: root.zmanimList
-                }
-
-                // Shabbat Times
-                ShabbatCard {
-                    Layout.fillWidth: true
-                    candleLighting: root.candleLighting
-                    fontFamily: root.fontFamily
-                    havdalah: root.havdalah
-                    parsha: root.parsha
-                }
-            }
+        // Shabbat Times
+        ShabbatCard {
+            Layout.fillWidth: true
+            candleLighting: root.candleLighting
+            fontFamily: root.fontFamily
+            havdalah: root.havdalah
+            parsha: root.parsha
         }
     }
 

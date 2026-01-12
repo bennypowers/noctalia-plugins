@@ -147,7 +147,7 @@ NBox {
 
                     Rectangle {
                         anchors.centerIn: parent
-                        color: modelData.isToday ? Color.mSecondary : Color.transparent
+                        color: modelData.isToday ? Color.mSecondary : "transparent"
                         height: Style.baseWidgetSize * 0.9
                         radius: Style.radiusM
                         width: Style.baseWidgetSize * 0.9
