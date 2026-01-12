@@ -4,57 +4,57 @@
     {
       "id": "bar-widget-background-apps",
       "name": "Background Apps",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": "Benny Powers",
       "description": "Display Freedesktop background apps (like Pika Backup) in the bar",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
-      "lastUpdated": "2026-01-10T21:18:31+02:00"
+      "lastUpdated": "2026-01-12T10:56:08+02:00"
     },
     {
       "id": "bar-widget-hebrew-calendar",
       "name": "Hebrew Calendar",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "author": "Benny Powers <web@bennypowers.com>",
       "description": "Display current Hebrew date in the bar",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
-      "lastUpdated": "2026-01-08T11:40:27+02:00"
+      "lastUpdated": "2026-01-12T10:56:08+02:00"
     },
     {
       "id": "bar-widget-thread-bars",
       "name": "CPU Thread Bars (Bar Widget)",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": "Benny Powers <web@bennypowers.com>",
       "description": "Bar widget showing compact CPU usage bars for each thread/core. Click to view detailed system performance metrics in a panel.",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
-      "lastUpdated": "2026-01-05T19:43:06+02:00"
+      "lastUpdated": "2026-01-12T10:56:08+02:00"
     },
     {
       "id": "desktop-widget-thread-bars",
       "name": "CPU Thread Bars",
-      "version": "1.0.3",
+      "version": "1.0.4",
       "author": "Benny Powers <web@bennypowers.com>",
       "description": "Desktop widget showing CPU usage bars for each thread/core with RAM indicator",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
-      "lastUpdated": "2026-01-04T10:43:50+02:00"
+      "lastUpdated": "2026-01-12T10:56:08+02:00"
     },
     {
       "id": "polkit-agent",
       "name": "Polkit Authentication Agent",
-      "version": "1.0.2",
+      "version": "1.0.3",
       "author": "Benny Powers <web@bennypowers.com>",
       "description": "System authentication agent for polkit using quickshell-polkit-agent",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
-      "lastUpdated": "2026-01-08T13:12:35+02:00"
+      "lastUpdated": "2026-01-12T10:56:08+02:00"
     }
   ]
 }
