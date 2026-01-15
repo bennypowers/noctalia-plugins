@@ -25,6 +25,18 @@ Rectangle {
     readonly property int updateInterval: pluginApi?.pluginSettings?.updateInterval ||
                                           pluginApi?.manifest?.metadata?.defaultSettings?.updateInterval ||
                                           3000
+    readonly property string displayMode: pluginApi?.pluginSettings?.displayMode ||
+                                          pluginApi?.manifest?.metadata?.defaultSettings?.displayMode ||
+                                          "full"
+
+    // Computed: count of apps with status messages (for badge)
+    readonly property int messageCount: {
+        var count = 0;
+        for (var i = 0; i < backgroundApps.length; i++) {
+            if (backgroundApps[i].message) count++;
+        }
+        return count;
+    }
 
     // Data
     property var backgroundApps: []
@@ -40,8 +52,10 @@ Rectangle {
     border.color: Style.capsuleBorderColor
     border.width: Style.capsuleBorderWidth
 
-    implicitHeight: barIsVertical ? Math.round(appFlow.implicitHeight) : Style.capsuleHeight
-    implicitWidth: barIsVertical ? Style.capsuleHeight : Math.round(appFlow.implicitWidth)
+    implicitHeight: displayMode === "menu" ? Style.capsuleHeight :
+                    (barIsVertical ? Math.round(appFlow.implicitHeight) : Style.capsuleHeight)
+    implicitWidth: displayMode === "menu" ? Style.capsuleHeight :
+                   (barIsVertical ? Style.capsuleHeight : Math.round(appFlow.implicitWidth))
 
     visible: backgroundApps.length > 0
     opacity: backgroundApps.length > 0 ? 1.0 : 0.0
@@ -180,13 +194,64 @@ Rectangle {
         }
     }
 
-    // Main content - app icons
+    // Menu button mode - single icon with badge
+    Item {
+        id: menuButton
+        anchors.fill: parent
+        visible: displayMode === "menu"
+
+        NIcon {
+            id: menuIcon
+            anchors.centerIn: parent
+            icon: "background"
+            pointSize: Style.fontSizeL
+            applyUiScale: false
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+
+            onClicked: {
+                TooltipService.hideImmediately();
+                root.openPanel();
+            }
+
+            onEntered: {
+                var tooltip = root.backgroundApps.length + " background app" +
+                              (root.backgroundApps.length !== 1 ? "s" : "");
+                TooltipService.show(menuIcon, tooltip, BarService.getTooltipDirection());
+            }
+
+            onExited: TooltipService.hide()
+        }
+
+        // Notification badge (visible when apps have status messages)
+        Rectangle {
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.rightMargin: 2
+            anchors.topMargin: 1
+            z: 2
+            height: 8
+            width: height
+            radius: Style.radiusXS
+            color: Color.mError
+            border.color: Color.mSurface
+            border.width: Style.borderS
+            visible: root.messageCount > 0
+        }
+    }
+
+    // Full mode - all app icons
     Flow {
         id: appFlow
 
         anchors.centerIn: parent
         spacing: Style.marginXS
         flow: barIsVertical ? Flow.TopToBottom : Flow.LeftToRight
+        visible: displayMode === "full"
 
         Repeater {
             model: root.backgroundApps
