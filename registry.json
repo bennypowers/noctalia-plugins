@@ -4,13 +4,13 @@
     {
       "id": "bar-widget-background-apps",
       "name": "Background Apps",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": "Benny Powers",
       "description": "Display Freedesktop background apps (like Pika Backup) in the bar",
       "repository": "https://github.com/bennypowers/noctalia-plugins",
       "minNoctaliaVersion": "0.1.0",
       "license": "GPLv3",
-      "lastUpdated": "2026-01-12T10:56:08+02:00"
+      "lastUpdated": "2026-01-15T10:19:50+02:00"
     },
     {
       "id": "bar-widget-hebrew-calendar",
