@@ -20,6 +20,7 @@ Rectangle {
     // Layout helpers
     readonly property bool barIsVertical: barPosition === "left" || barPosition === "right"
     readonly property int iconSize: Style.toOdd(Style.capsuleHeight * 0.65)
+    readonly property string menuIconName: "background"
 
     // Settings
     readonly property int updateInterval: pluginApi?.pluginSettings?.updateInterval ||
@@ -30,10 +31,12 @@ Rectangle {
                                           "full"
 
     // Computed: count of apps with status messages (for badge)
-    readonly property int messageCount: {
+    readonly property int messageCount: countMessagesIn(backgroundApps)
+
+    function countMessagesIn(apps) {
         var count = 0;
-        for (var i = 0; i < backgroundApps.length; i++) {
-            if (backgroundApps[i].message) count++;
+        for (var i = 0; i < apps.length; i++) {
+            if (apps[i].message) count++;
         }
         return count;
     }
@@ -203,7 +206,7 @@ Rectangle {
         NIcon {
             id: menuIcon
             anchors.centerIn: parent
-            icon: "background"
+            icon: menuIconName
             pointSize: Style.fontSizeL
             applyUiScale: false
         }
