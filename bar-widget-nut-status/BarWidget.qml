@@ -26,6 +26,18 @@ Item {
                                           pluginApi?.manifest?.metadata?.defaultSettings?.updateInterval ||
                                           5000
     readonly property string configuredUpsName: pluginApi?.pluginSettings?.upsName || ""
+    readonly property bool showPowerDraw: pluginApi?.pluginSettings?.showPowerDraw ||
+                                          pluginApi?.manifest?.metadata?.defaultSettings?.showPowerDraw ||
+                                          false
+    readonly property bool showBatteryOnlyOnBattery: pluginApi?.pluginSettings?.showBatteryOnlyOnBattery ||
+                                                     pluginApi?.manifest?.metadata?.defaultSettings?.showBatteryOnlyOnBattery ||
+                                                     false
+    readonly property string batteryColor: pluginApi?.pluginSettings?.batteryColor ||
+                                           pluginApi?.manifest?.metadata?.defaultSettings?.batteryColor ||
+                                           "auto"
+    readonly property real powerFactor: pluginApi?.pluginSettings?.powerFactor ||
+                                        pluginApi?.manifest?.metadata?.defaultSettings?.powerFactor ||
+                                        0.6
 
     // Auto-detected or configured UPS name
     property string detectedUpsName: ""
@@ -34,6 +46,8 @@ Item {
     // UPS data
     property int batteryCharge: -1
     property string upsStatus: ""
+    property real powerDraw: -1
+    property bool powerDrawEstimated: false
     property bool upsAvailable: false
 
     // Status parsing
@@ -43,7 +57,6 @@ Item {
     readonly property bool isCharging: upsStatus.indexOf("CHRG") >= 0
 
     // Icon selection based on charge level and status
-    // Uses Tabler icons: battery, battery-1 through battery-4, battery-charging, battery-off, battery-exclamation
     readonly property string batteryIcon: {
         if (!upsAvailable) return "battery-off";
         if (isLowBattery) return "battery-exclamation";
@@ -60,10 +73,24 @@ Item {
     readonly property color statusColor: {
         if (!upsAvailable) return Color.mOnSurfaceVariant;
         if (isLowBattery) return Color.mError;
-        if (isOnBattery) return Color.mTertiary;
+        if (isOnBattery) {
+            if (batteryColor === "auto") return Color.mTertiary;
+            if (batteryColor === "tertiary") return Color.mTertiary;
+            if (batteryColor === "warning") return "#ffb300";
+            if (batteryColor === "error") return Color.mError;
+            if (batteryColor === "primary") return Color.mPrimary;
+            if (batteryColor === "onsurface") return Color.mOnSurface;
+            return Color.mTertiary;
+        }
         if (batteryCharge <= 20) return Color.mError;
         if (batteryCharge <= 40) return Color.mTertiary;
         return Color.mOnSurface;
+    }
+
+    // Show battery percentage based on setting
+    readonly property bool showBatteryCharge: {
+        if (!showBatteryOnlyOnBattery) return batteryCharge >= 0;
+        return batteryCharge >= 0 && isOnBattery;
     }
 
     // Content dimensions for implicit sizing
@@ -96,6 +123,27 @@ Item {
         }
     }
 
+    NPopupContextMenu {
+        id: contextMenu
+
+        model: [
+            {
+                "label": "Settings",
+                "action": "widget-settings",
+                "icon": "settings"
+            },
+        ]
+
+        onTriggered: action => {
+            contextMenu.close();
+            PanelService.closeContextMenu(screen);
+
+            if (action === "widget-settings") {
+                BarService.openPluginSettings(screen, pluginApi?.manifest);
+            }
+        }
+    }
+
     // Visual capsule
     Rectangle {
         id: capsule
@@ -122,12 +170,20 @@ Item {
                 color: root.statusColor
             }
 
-            // Charge percentage (only show when we have data)
+            // Charge percentage
             NText {
-                visible: root.batteryCharge >= 0
+                visible: root.showBatteryCharge
                 text: root.batteryCharge + "%"
                 color: root.statusColor
                 pointSize: Style.fontSizeM
+            }
+
+            // Power draw
+            NText {
+                visible: root.showPowerDraw && root.powerDraw >= 0
+                text: (root.powerDrawEstimated ? "~" : "") + root.powerDraw.toFixed(0) + "W"
+                color: root.statusColor
+                pointSize: Style.fontSizeXS
             }
 
             // Status indicator for on-battery
@@ -136,7 +192,7 @@ Item {
                 icon: "bolt"
                 pointSize: Style.fontSizeS
                 applyUiScale: false
-                color: Color.mTertiary
+                color: root.statusColor
             }
         }
     }
@@ -148,14 +204,23 @@ Item {
         cursorShape: Qt.PointingHandCursor
 
         onClicked: {
-            TooltipService.hideImmediately();
-            openPanel();
+            if (mouse.button === Qt.RightButton) {
+                PanelService.showContextMenu(contextMenu, root, screen);
+            } else {
+                TooltipService.hideImmediately();
+                openPanel();
+            }
         }
+
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
 
         onEntered: {
             var tooltip = "UPS: " + root.activeUpsName;
             if (root.batteryCharge >= 0) {
                 tooltip += "\nCharge: " + root.batteryCharge + "%";
+            }
+            if (root.powerDraw >= 0) {
+                tooltip += "\nPower: " + (root.powerDrawEstimated ? "~" : "") + root.powerDraw.toFixed(0) + "W";
             }
             if (root.isOnline) {
                 tooltip += "\nStatus: Online (AC Power)";
@@ -258,6 +323,7 @@ Item {
                 root.upsAvailable = false;
                 root.batteryCharge = -1;
                 root.upsStatus = "";
+                root.powerDraw = -1;
             }
             collectedOutput = "";
         }
@@ -265,16 +331,47 @@ Item {
 
     function parseUpsOutput(output) {
         var lines = output.split('\n');
+        var loadPercent = -1;
+        var outputVoltage = 0;
+        var outputCurrentNominal = 0;
+        root.powerDraw = -1;
+
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i].trim();
-            if (line.startsWith("battery.charge:")) {
-                var charge = parseInt(line.split(":")[1].trim(), 10);
-                if (!isNaN(charge)) {
-                    batteryCharge = charge;
-                }
-            } else if (line.startsWith("ups.status:")) {
-                upsStatus = line.split(":")[1].trim();
+            var colonIdx = line.indexOf(":");
+            if (colonIdx < 0) continue;
+
+            var key = line.substring(0, colonIdx).trim();
+            var value = line.substring(colonIdx + 1).trim();
+
+            if (key === "battery.charge") {
+                var charge = parseInt(value, 10);
+                if (!isNaN(charge)) batteryCharge = charge;
+            } else if (key === "ups.status") {
+                upsStatus = value;
+            } else if (key === "ups.realpower" && powerDraw < 0) {
+                var rp = parseFloat(value);
+                if (!isNaN(rp)) powerDraw = rp;
+            } else if (key === "input.realpower" && powerDraw < 0) {
+                var ip = parseFloat(value);
+                if (!isNaN(ip)) powerDraw = ip;
+            } else if (key === "ups.load") {
+                var load = parseFloat(value);
+                if (!isNaN(load)) loadPercent = load;
+            } else if (key === "output.voltage") {
+                var v = parseFloat(value);
+                if (!isNaN(v)) outputVoltage = v;
+            } else if (key === "output.current.nominal") {
+                var c = parseFloat(value);
+                if (!isNaN(c)) outputCurrentNominal = c;
             }
+        }
+
+        if (powerDraw < 0 && loadPercent >= 0 && outputVoltage > 0 && outputCurrentNominal > 0) {
+            var maxVA = outputVoltage * outputCurrentNominal;
+            var maxWatts = maxVA * root.powerFactor;
+            powerDraw = (loadPercent / 100) * maxWatts;
+            root.powerDrawEstimated = true;
         }
     }
 

@@ -15,7 +15,11 @@
   "metadata": {
     "defaultSettings": {
       "updateInterval": 5000,
-      "upsName": ""
+      "upsName": "",
+      "showPowerDraw": true,
+      "showBatteryOnlyOnBattery": true,
+      "batteryColor": "error",
+      "powerFactor": 0.6
     }
   }
 }
