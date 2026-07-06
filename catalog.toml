@@ -1,0 +1,31 @@
+[[plugin]]
+id           = "bennypowers/nut-status"
+name         = "NUT UPS Status"
+version      = "2.0.0"
+author       = "bennypowers"
+license      = "GPL-3.0"
+description  = "Bar widget showing UPS battery status from Network UPS Tools (NUT)"
+min_noctalia = "5.0.0"
+tags         = ["ups", "battery", "power", "nut"]
+dependencies = ["nut"]
+
+[[plugin]]
+id           = "bennypowers/hebrew-calendar"
+name         = "Hebrew Calendar"
+version      = "2.0.0"
+author       = "bennypowers"
+license      = "GPL-3.0"
+description  = "Display current Hebrew date in the bar with full calendar panel"
+min_noctalia = "5.0.0"
+tags         = ["hebrew", "calendar", "jewish", "zmanim", "shabbat"]
+dependencies = ["hebcal"]
+
+[[plugin]]
+id           = "bennypowers/background-apps"
+name         = "Background Apps"
+version      = "2.0.0"
+author       = "bennypowers"
+license      = "GPL-3.0"
+description  = "Display Freedesktop background apps in the bar"
+min_noctalia = "5.0.0"
+tags         = ["background", "apps", "flatpak", "portal"]
