@@ -1,0 +1,74 @@
+id           = "bennypowers/nut-status"
+name         = "NUT UPS Status"
+version      = "2.0.0"
+min_noctalia = "5.0.0"
+author       = "bennypowers"
+license      = "GPL-3.0"
+description  = "Bar widget showing UPS battery status from Network UPS Tools (NUT)"
+tags         = ["ups", "battery", "power", "nut"]
+dependencies = ["nut"]
+
+[[setting]]
+key         = "upsName"
+type        = "string"
+label       = "UPS Name"
+description = "UPS to monitor (leave empty for auto-detect)"
+default     = ""
+
+[[setting]]
+key         = "updateInterval"
+type        = "int"
+label       = "Update Interval (ms)"
+description = "Polling interval in milliseconds"
+default     = 5000
+min         = 1000
+max         = 60000
+
+[[setting]]
+key         = "showPowerDraw"
+type        = "bool"
+label       = "Show Power Draw"
+description = "Display current power draw in watts"
+default     = true
+
+[[setting]]
+key         = "showBatteryOnlyOnBattery"
+type        = "bool"
+label       = "Show Battery % Only on Battery"
+description = "Hide percentage when UPS is on mains power"
+default     = true
+
+[[setting]]
+key         = "batteryColor"
+type        = "select"
+label       = "On-Battery Color"
+description = "Color for battery icon when UPS is on battery power"
+default     = "error"
+options     = [
+  { value = "auto",     label = "Auto (Default)" },
+  { value = "tertiary", label = "Tertiary (Blue)" },
+  { value = "warning",  label = "Warning (Amber)" },
+  { value = "error",    label = "Error (Red)" },
+  { value = "primary",  label = "Primary" },
+  { value = "onsurface", label = "Surface (Neutral)" },
+]
+
+[[setting]]
+key         = "powerFactor"
+type        = "double"
+label       = "Power Factor"
+description = "Ratio of real power to apparent power (typically 0.6-0.9)"
+default     = 0.6
+min         = 0.1
+max         = 1.0
+
+[[widget]]
+id    = "status"
+entry = "widget.luau"
+
+[[panel]]
+id        = "details"
+entry     = "panel.luau"
+width     = 350
+height    = 480
+placement = "attached"
