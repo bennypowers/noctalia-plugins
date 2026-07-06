@@ -1,0 +1,54 @@
+id           = "bennypowers/hebrew-calendar"
+name         = "Hebrew Calendar"
+version      = "2.0.0"
+min_noctalia = "5.0.0"
+author       = "bennypowers"
+license      = "GPL-3.0"
+description  = "Display current Hebrew date in the bar with full calendar panel"
+tags         = ["hebrew", "calendar", "jewish", "zmanim", "shabbat"]
+dependencies = ["hebcal"]
+
+[[setting]]
+key         = "template"
+type        = "string"
+label       = "Date Format Template"
+description = "Placeholders: {day}, {month}, {year}, {weekday}"
+default     = "{day} {month}"
+
+[[setting]]
+key         = "city"
+type        = "string"
+label       = "City"
+description = "City name for zmanim and candle lighting times"
+default     = "Jerusalem"
+
+[[setting]]
+key         = "israeli"
+type        = "bool"
+label       = "Israeli Holiday Schedule"
+description = "Use Israeli (not Diaspora) holiday schedule"
+default     = true
+
+[[setting]]
+key         = "language"
+type        = "select"
+label       = "Display Language"
+description = "Language for Hebrew date display"
+default     = "he-x-NoNikud"
+options     = [
+  { value = "he-x-NoNikud", label = "Hebrew (no vowels)" },
+  { value = "he",           label = "Hebrew (with vowels)" },
+  { value = "en",           label = "English" },
+  { value = "ashkenazi",    label = "Ashkenazi" },
+]
+
+[[widget]]
+id    = "date"
+entry = "widget.luau"
+
+[[panel]]
+id        = "calendar"
+entry     = "panel.luau"
+width     = 420
+height    = "fill"
+placement = "attached"
