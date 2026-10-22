@@ -1,6 +1,6 @@
 # Hebrew Calendar
 
-Noctalia v5 bar widget displaying the current Hebrew date with a full calendar panel.
+Noctalia 5.3.0+ bar widget displaying the current Hebrew date with a full calendar panel.
 
 ## Features
 

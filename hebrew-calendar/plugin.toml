@@ -1,45 +1,46 @@
 id           = "bennypowers/hebrew-calendar"
 name         = "Hebrew Calendar"
-version      = "2.0.0"
-min_noctalia = "5.0.0"
+version      = "2.1.0"
+plugin_api   = 3
 author       = "bennypowers"
 license      = "GPL-3.0"
+icon         = "calendar"
 description  = "Display current Hebrew date in the bar with full calendar panel"
 tags         = ["hebrew", "calendar", "jewish", "zmanim", "shabbat"]
 dependencies = ["hebcal"]
 
 [[setting]]
-key         = "template"
-type        = "string"
-label       = "Date Format Template"
-description = "Placeholders: {day}, {month}, {year}, {weekday}"
-default     = "{day} {month}"
+key             = "template"
+type            = "string"
+label_key       = "settings.template.label"
+description_key = "settings.template.description"
+default         = "{day} {month}"
 
 [[setting]]
-key         = "city"
-type        = "string"
-label       = "City"
-description = "City name for zmanim and candle lighting times"
-default     = "Jerusalem"
+key             = "city"
+type            = "string"
+label_key       = "settings.city.label"
+description_key = "settings.city.description"
+default         = "Jerusalem"
 
 [[setting]]
-key         = "israeli"
-type        = "bool"
-label       = "Israeli Holiday Schedule"
-description = "Use Israeli (not Diaspora) holiday schedule"
-default     = true
+key             = "israeli"
+type            = "bool"
+label_key       = "settings.israeli.label"
+description_key = "settings.israeli.description"
+default         = true
 
 [[setting]]
-key         = "language"
-type        = "select"
-label       = "Display Language"
-description = "Language for Hebrew date display"
-default     = "he-x-NoNikud"
-options     = [
-  { value = "he-x-NoNikud", label = "Hebrew (no vowels)" },
-  { value = "he",           label = "Hebrew (with vowels)" },
-  { value = "en",           label = "English" },
-  { value = "ashkenazi",    label = "Ashkenazi" },
+key             = "language"
+type            = "select"
+label_key       = "settings.language.label"
+description_key = "settings.language.description"
+default         = "he-x-NoNikud"
+options         = [
+  { value = "he-x-NoNikud", label_key = "settings.language.options.he_no_nikud" },
+  { value = "he",           label_key = "settings.language.options.he" },
+  { value = "en",           label_key = "settings.language.options.en" },
+  { value = "ashkenazi",    label_key = "settings.language.options.ashkenazi" },
 ]
 
 [[widget]]
