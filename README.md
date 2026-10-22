@@ -1,29 +1,25 @@
-# Noctalia Plugins Registry
+# Noctalia Plugins
 
-***Unofficial*** plugin registry for [Noctalia Shell][noctaliashell] based on the [official plugin registry][officialpluginregistry].
+Personal plugins for [Noctalia](https://noctalia.dev/) v5.
 
-## Overview
+## Plugins
 
-This repository hosts my personal/forked/non-upstreamed plugins for Noctalia Shell. The `registry.json` file is automatically maintained and provides a centralized index of all available plugins.
+| Plugin | Description |
+|--------|-------------|
+| [background-apps](background-apps/) | Display Freedesktop background apps in the bar |
+| [hebrew-calendar](hebrew-calendar/) | Hebrew date display with full calendar panel |
+| [nut-status](nut-status/) | UPS battery status from NUT |
 
-## Registry Automation
+## Installation
 
-The plugin registry is automatically maintained using GitHub Actions:
+Add this repo as a plugin source:
 
-- **Automatic Updates**: Registry updates when manifest.json files are modified
-- **PR Validation**: Pull requests show if registry will be updated
+```
+noctalia msg plugins source add bennypowers git https://github.com/bennypowers/noctalia-plugins
+```
 
-See [.github/workflows/README.md][githubworkflowsreadmemd] for technical details.
-
-## Available Plugins
-
-Check [registry.json][registryjson] for the complete list of available plugins.
+Then enable plugins in Settings.
 
 ## License
 
 GPLv3
-
-[noctaliashell]: https://github.com/noctalia-dev/noctalia-shell
-[officialpluginregistry]: https://github.com/noctalia-dev/noctalia-plugins
-[githubworkflowsreadmemd]: .github/workflows/README.md
-[registryjson]: registry.json
