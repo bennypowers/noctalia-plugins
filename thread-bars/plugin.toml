@@ -1,0 +1,35 @@
+id           = "bennypowers/thread-bars"
+name         = "CPU Thread Bars"
+version      = "2.0.0"
+plugin_api   = 32
+author       = "bennypowers"
+license      = "GPL-3.0"
+icon         = "cpu"
+description  = "Per-core CPU load bars styled like the built-in sysmon gauge"
+tags         = ["cpu", "sysmon", "monitor", "system"]
+
+[[setting]]
+key             = "updateInterval"
+type            = "int"
+label_key       = "settings.update_interval.label"
+description_key = "settings.update_interval.description"
+default         = 2000
+min             = 500
+max             = 10000
+
+[[setting]]
+key             = "highlightColor"
+type            = "select"
+label_key       = "settings.highlight_color.label"
+description_key = "settings.highlight_color.description"
+default         = "error"
+options         = [
+  { value = "error",     label_key = "settings.highlight_color.options.error" },
+  { value = "tertiary",  label_key = "settings.highlight_color.options.tertiary" },
+  { value = "secondary", label_key = "settings.highlight_color.options.secondary" },
+  { value = "primary",   label_key = "settings.highlight_color.options.primary" },
+]
+
+[[widget]]
+id    = "cores"
+entry = "widget.luau"

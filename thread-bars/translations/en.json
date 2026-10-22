@@ -1,0 +1,18 @@
+{
+  "settings": {
+    "update_interval": {
+      "label": "Update Interval",
+      "description": "How often to refresh per-core CPU usage, in milliseconds"
+    },
+    "highlight_color": {
+      "label": "Highlight Color",
+      "description": "Color the bars tint toward as usage crosses the system monitor thresholds",
+      "options": {
+        "error": "Error (Red)",
+        "tertiary": "Tertiary",
+        "secondary": "Secondary",
+        "primary": "Primary"
+      }
+    }
+  }
+}
