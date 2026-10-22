@@ -36,10 +36,10 @@ tags        = ["background", "apps", "flatpak", "portal"]
 [[plugin]]
 id          = "bennypowers/thread-bars"
 name        = "CPU Thread Bars"
-version     = "2.0.0"
+version     = "2.1.0"
 author      = "bennypowers"
 license     = "GPL-3.0"
 icon        = "cpu"
-description = "Per-core CPU load bars styled like the built-in sysmon gauge"
+description = "Per-core CPU load bars with a per-core history panel"
 plugin_api  = 32
 tags        = ["cpu", "sysmon", "monitor", "system"]

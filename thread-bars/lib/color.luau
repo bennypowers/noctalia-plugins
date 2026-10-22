@@ -128,6 +128,15 @@ local function hsvToRgb(h, s, v, a)
   return { r = r, g = g, b = b, a = a }
 end
 
+function M.toHsv(color)
+  local h, s, v = rgbToHsv(color)
+  return { h = h, s = s, v = v, a = color.a or 1 }
+end
+
+function M.fromHsv(h, s, v, a)
+  return hsvToRgb(h, s, v, a or 1)
+end
+
 -- Port of lerpHsvChromaWeighted: low-chroma hues get proportionally less
 -- influence, so a near-grey foreground does not drag the highlight's hue.
 function M.blend(from, to, t)

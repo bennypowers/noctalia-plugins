@@ -1,4 +1,15 @@
 {
+  "panel": {
+    "title": "CPU Threads",
+    "overall": "Overall CPU",
+    "peak": "Peak",
+    "average": "Average",
+    "hottest": "Hottest",
+    "threads": "threads",
+    "history_caption": "Last 30 samples",
+    "overall_line": "Overall line",
+    "waiting": "Waiting for samples..."
+  },
   "settings": {
     "update_interval": {
       "label": "Sample Interval",
