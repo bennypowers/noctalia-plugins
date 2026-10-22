@@ -11,6 +11,9 @@ monitor's CPU activity and critical thresholds, so the widget follows the same v
 
 On a vertical bar, the stems rotate to horizontal and stack in a column.
 
+Between samples the stems ease toward their new values with a frame-rate independent interpolation. The widget runs a
+50 ms tick while animating, then drops back to the sample interval once settled, so idle CPU cost stays low.
+
 ## Data source
 
 Uses `noctalia.cpuCores()`. This opts into Noctalia's per-core sampler (one extra `/proc/stat` read per second) and
@@ -27,7 +30,7 @@ The first sample arrives up to one second after the widget loads; until then the
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `updateInterval` | 2000 | Refresh interval in milliseconds |
+| `updateInterval` | 2000 | Sample interval in milliseconds; bars animate between samples |
 | `highlightColor` | `error` | Palette role the bars tint toward at high usage |
 
 Thresholds come from the shell config:

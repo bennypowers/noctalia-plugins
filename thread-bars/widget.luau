@@ -3,8 +3,9 @@
 -- stems with a dimmed track and a foreground-to-highlight gradient.
 
 local color = require("./lib/color.luau")
+local animate = require("./lib/animate.luau")
 
-local updateInterval = noctalia.getConfig("updateInterval") or 2000
+local sampleInterval = noctalia.getConfig("updateInterval") or 2000
 local highlightRole = noctalia.getConfig("highlightColor") or "error"
 
 local activityThreshold =
@@ -16,6 +17,17 @@ local STEM_WIDTH = 4
 local STEM_HEIGHT = 17
 local STEM_GAP = 4
 local STEM_RADIUS = 2
+
+-- Bar widgets have no frame-tick API. Run a short interval while the bars are
+-- easing, then fall back to the sampling interval once they settle.
+local ANIMATION_TICK_MS = 50
+local SMOOTHING_TAU_MS = 110
+
+local targets = nil
+local display = nil
+local lastSampleAt = 0
+local lastTickAt = 0
+local currentTickMs = nil
 
 local function palette()
   local base = noctalia.getColor("on_surface")
@@ -92,13 +104,77 @@ local function render(cores)
   barWidget.setVisible(true)
 end
 
-local function refresh()
-  render(noctalia.cpuCores())
+local function setTick(ms)
+  ms = math.max(16, math.floor(ms))
+  if ms ~= currentTickMs then
+    currentTickMs = ms
+    noctalia.setUpdateInterval(ms)
+  end
 end
 
-noctalia.setUpdateInterval(updateInterval)
-refresh()
+local function sample(now)
+  -- The idle timer targets sampleInterval exactly; allow for a little timer
+  -- jitter so an early wake-up does not push the next sample out another cycle.
+  if targets and now - lastSampleAt < sampleInterval - ANIMATION_TICK_MS then return end
+
+  local cores = noctalia.cpuCores()
+  if cores and #cores > 0 then
+    targets = {}
+    for index, value in ipairs(cores) do
+      targets[index] = math.max(0, math.min(100, value or 0))
+    end
+    lastSampleAt = now
+  elseif targets then
+    lastSampleAt = now
+  end
+end
+
+local function tick()
+  local now = noctalia.nowMs()
+  sample(now)
+
+  if not targets then
+    barWidget.setVisible(false)
+    setTick(ANIMATION_TICK_MS)
+    return
+  end
+
+  if not display then
+    display = {}
+    for index, value in ipairs(targets) do display[index] = value end
+    render(display)
+    lastTickAt = now
+    setTick(sampleInterval)
+    return
+  end
+
+  -- After an idle gap the first frame needs an animation-sized delta, not the
+  -- whole sampling interval, or the bars jump in one step.
+  local elapsed = now - lastTickAt
+  local dt = (lastTickAt == 0 or elapsed > ANIMATION_TICK_MS * 2) and ANIMATION_TICK_MS or elapsed
+  lastTickAt = now
+
+  local nextDisplay, moving = animate.smooth(display, targets, dt, SMOOTHING_TAU_MS)
+
+  local changed = #nextDisplay ~= #display
+  if not changed then
+    for index, value in ipairs(nextDisplay) do
+      if value ~= display[index] then
+        changed = true
+        break
+      end
+    end
+  end
+
+  display = nextDisplay
+  if changed then render(display) end
+
+  setTick(moving and ANIMATION_TICK_MS or sampleInterval)
+end
+
+setTick(ANIMATION_TICK_MS)
+tick()
 
 function update()
-  refresh()
+  tick()
 end

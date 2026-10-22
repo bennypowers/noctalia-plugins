@@ -1,8 +1,8 @@
 {
   "settings": {
     "update_interval": {
-      "label": "Update Interval",
-      "description": "How often to refresh per-core CPU usage, in milliseconds"
+      "label": "Sample Interval",
+      "description": "How often to sample per-core CPU usage, in milliseconds; bars ease between samples"
     },
     "highlight_color": {
       "label": "Highlight Color",
