@@ -30,7 +30,18 @@ local function activateApp(appId)
   noctalia.runAsync("gtk-launch '" .. appId:gsub("'", "'\\''") .. "'")
 end
 
-local function render(apps)
+local function toArray(t)
+  if not t then return {} end
+  if #t > 0 then return t end
+  local arr = {}
+  for _, v in pairs(t) do
+    if type(v) == "table" then table.insert(arr, v) end
+  end
+  return arr
+end
+
+local function render(rawApps)
+  local apps = toArray(rawApps)
   local children = {}
 
   table.insert(children, ui.row({ align = "center", justify = "space_between" }, {
@@ -38,7 +49,7 @@ local function render(apps)
     ui.button({ glyph = "x", variant = "ghost", onClick = "onClosePanel" }),
   }))
 
-  if not apps or #apps == 0 then
+  if #apps == 0 then
     table.insert(children, ui.label({
       text = "No background apps running",
       fontSize = 14,
@@ -49,24 +60,21 @@ local function render(apps)
   end
 
   for i, app in ipairs(apps) do
-    local name = lookupAppName(app.appId)
-    local rowChildren = {
+    local appId = app.appId or app["appId"] or ""
+    local msg = app.message or app["message"] or ""
+    local name = lookupAppName(appId)
+
+    table.insert(children, ui.row({ gap = 10, align = "center", padding = 4 }, {
       ui.glyph({ name = "app-window", size = 20, color = "on_surface" }),
       ui.column({ gap = 2, flexGrow = 1 }, {
         ui.label({ text = name, fontSize = 14 }),
-        (app.message and app.message ~= "") and ui.label({
-          text = app.message,
+        msg ~= "" and ui.label({
+          text = msg,
           fontSize = 12,
           color = "on_surface_variant",
         }) or ui.spacer({ height = 0 }),
       }),
-    }
-
-    table.insert(children, ui.box({
-      radius = 8,
-      onClick = "activate_" .. i,
-    }, {
-      ui.row({ gap = 10, align = "center", padding = 8 }, rowChildren),
+      ui.button({ glyph = "external-link", variant = "ghost", onClick = "activate_" .. i }),
     }))
   end
 
