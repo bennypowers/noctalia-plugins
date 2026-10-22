@@ -1,0 +1,51 @@
+name: Validate Plugins
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '*/**'
+      - 'catalog.toml'
+      - '.github/workflows/validate-plugins.py'
+      - '.github/workflows/validate-plugins.yaml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '*/**'
+      - 'catalog.toml'
+      - '.github/workflows/validate-plugins.py'
+      - '.github/workflows/validate-plugins.yaml'
+  workflow_dispatch:
+
+concurrency:
+  group: validate-plugins-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Validate manifests, translations, and catalog
+        run: python3 .github/workflows/validate-plugins.py
+
+      - name: Install Lua
+        run: sudo apt-get update && sudo apt-get install -y lua5.4
+
+      - name: Run parser tests
+        run: |
+          for test in tests/*.lua; do
+            lua5.4 "$test"
+          done

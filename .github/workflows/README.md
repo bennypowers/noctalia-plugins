@@ -1,57 +1,34 @@
-# Registry Update Script
+# Plugin validation
 
-This directory contains automation scripts for maintaining the plugin registry.
+This directory validates the Noctalia 5.3.0 plugin format.
 
-## update-registry.js
+## validate-plugins.py
 
-Automatically scans plugin directories and updates `registry.json` with current plugin metadata.
+Checks every `*/plugin.toml` and the root `catalog.toml`:
 
-### How It Works
+- required manifest fields, `plugin_api`, and semantic version
+- entry ids, entry files, and settings scope
+- translation keys resolve in `translations/en.json`
+- panel sizes and placement rules
+- `hover_highlight` requires `plugin_api >= 34`
+- catalog rows match each plugin's id, version, and `plugin_api`
 
-1. Scans all directories in the repository root
-2. Looks for `manifest.json` in each directory
-3. Extracts registry-relevant fields (id, name, version, author, etc.)
-4. Generates an updated `registry.json` with all discovered plugins
-5. Sorts plugins alphabetically by ID for consistent output
+Run locally:
 
-### Automatic Updates
+```sh
+python3 .github/workflows/validate-plugins.py
+```
 
-The script runs automatically via GitHub Actions when:
-- A `manifest.json` file is modified in any plugin directory
-- Changes are pushed to the `main` branch
-- Manually triggered via workflow dispatch
+## validate-plugins.yaml
 
-See [`.github/workflows/update-registry.yml`][githubworkflowsupdateregistryyml] for workflow details.
+Runs the validator on pushes to `main`, pull requests, and manual dispatch. It also runs the
+background-apps parser tests with Lua 5.4.
 
-## Adding New Plugins
+## Adding a plugin
 
-When you add a new plugin:
-
-1. Create a directory with your plugin files
-2. Include a valid `manifest.json` with required fields:
-   - `id`: Unique plugin identifier
-   - `name`: Human-readable plugin name
-   - `version`: Semantic version (e.g., "1.0.0")
-   - `author`: Plugin author name
-   - `description`: Brief plugin description
-   - `repository`: Repository URL
-   - `minNoctaliaVersion`: Minimum Noctalia version required
-   - `license`: License identifier (e.g., "MIT")
-
-3. The registry will automatically update when you push to main
-
-## Fields Included in Registry
-
-The registry extracts these fields from each plugin's manifest:
-- `id`
-- `name`
-- `version`
-- `author`
-- `description`
-- `repository`
-- `minNoctaliaVersion`
-- `license`
-
-Other manifest fields (like `entryPoints`, `dependencies`, `metadata`) are not included in the registry to keep it lightweight.
-
-[githubworkflowsupdateregistryyml]: ../.github/workflows/update-registry.yml
+1. Create a directory whose name matches the part of the id after `/`.
+2. Add `plugin.toml` with `id`, `name`, `version`, `plugin_api`, entries, and settings.
+3. Add `translations/en.json` containing every `label_key`, `description_key`, and option `label_key`.
+4. Add the entry `.luau` files and a `README.md`.
+5. Add a matching row to `catalog.toml`.
+6. Run `noctalia plugins lint <plugin-dir>` and the validator.
