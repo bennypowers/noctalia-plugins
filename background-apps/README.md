@@ -1,25 +1,40 @@
 # Background Apps
 
-Noctalia v5 bar widget that displays Freedesktop background apps.
+Noctalia 5.3.0+ bar widget that shows Freedesktop background apps as tray-style icons.
+
+## Tray integration
+
+The built-in `tray` widget displays StatusNotifierItems (SNI) only. Noctalia's plugin API does not let a plugin
+register SNI items, so background apps cannot be injected into that widget. Instead, this widget reproduces the tray's
+inline metrics: 16 px icons, 4 px gaps, one bar capsule, per-item tooltips, and no whole-widget hover tint.
+
+Place it next to the tray widget in the bar. For matching spacing between the two widgets, set
+`match_adjacent_spacing = true` on the tray widget and give both widgets the same capsule settings.
 
 ## Features
 
-- Shows count of apps running in the background (no visible windows)
-- Click to open panel with app list
-- Panel shows app names (parsed from .desktop files) and status messages
-- Click app rows to activate/focus
-- Auto-hides when no background apps running
+- One icon per app running in the background (no visible windows)
+- Tooltips with the app name and, when available, its background status message
+- Click an icon, or the widget, to open a panel with the full list
+- Click a panel row to launch the app
+- Auto-hides when no background apps are running
 
-## Detection Methods
+## Detection
 
-### Portal (primary)
-Uses `org.freedesktop.background.Monitor` DBus interface. Apps can set status messages via the portal.
+### Portal (preferred)
+
+Reads `org.freedesktop.background.Monitor.BackgroundApps` over D-Bus with `gdbus`. Apps that report themselves to the
+portal also supply the status message shown in the tooltip and panel.
+
+When the portal returns no apps, the fallback detector runs.
 
 ### Flatpak + Niri (fallback)
-Computes background apps by:
-1. Getting running Flatpak instances via `flatpak ps`
-2. Getting apps with visible windows via `niri msg windows`
-3. Background apps = running Flatpaks - apps with windows
+
+1. Lists running Flatpaks with `flatpak ps`
+2. Lists apps with visible windows with `niri msg windows`
+3. Treats running Flatpaks without a window as background apps
+
+The fallback only runs on Niri; without `niri` it reports no apps rather than mislabeling every Flatpak.
 
 ## Settings
 
@@ -29,7 +44,8 @@ Computes background apps by:
 
 ## Requirements
 
-- `xdg-desktop-portal` (for portal method) or `flatpak` + `niri` (for fallback)
+- `xdg-desktop-portal` with a background monitor implementation for the preferred path
+- `flatpak` and `niri` for the fallback path
 
 ## License
 

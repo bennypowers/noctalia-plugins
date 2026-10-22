@@ -1,28 +1,34 @@
 id           = "bennypowers/background-apps"
 name         = "Background Apps"
-version      = "2.0.0"
-min_noctalia = "5.0.0"
+version      = "2.1.0"
+plugin_api   = 34
 author       = "bennypowers"
 license      = "GPL-3.0"
+icon         = "apps"
 description  = "Display Freedesktop background apps in the bar"
 tags         = ["background", "apps", "flatpak", "portal"]
 
 [[setting]]
-key         = "updateInterval"
-type        = "int"
-label       = "Update Interval (ms)"
-description = "How often to check for background apps"
-default     = 3000
-min         = 1000
-max         = 30000
+key             = "updateInterval"
+type            = "int"
+label_key       = "settings.update_interval.label"
+description_key = "settings.update_interval.description"
+default         = 3000
+min             = 1000
+max             = 30000
+
+[[service]]
+id    = "detector"
+entry = "service.luau"
 
 [[widget]]
 id    = "apps"
 entry = "widget.luau"
+hover_highlight = false
 
 [[panel]]
 id        = "list"
 entry     = "panel.luau"
-width     = 350
-height    = 400
+width     = 360
+height    = 420
 placement = "attached"

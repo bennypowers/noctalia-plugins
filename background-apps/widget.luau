@@ -1,125 +1,70 @@
-local updateInterval = noctalia.getConfig("updateInterval")
-local portalWorked = false
-local apps = {}
+--!nonstrict
+-- Renders one tray-sized icon per background app. Noctalia's tray widget is
+-- SNI-only, and the plugin API cannot register StatusNotifierItems, so this
+-- widget mirrors the tray's metrics instead: 16px icons, 4px gaps, one capsule.
 
-local function parsePortalOutput(output)
-  local result = {}
-  for block in output:gmatch("{[^}]+}") do
-    local appId = block:match("'app_id':%s*<'([^']*)'")
-    local message = block:match("'message':%s*<'([^']*)'") or ""
-    if appId and appId ~= "" then
-      table.insert(result, { appId = appId, message = message })
-    end
-  end
-  return result
+local apps = noctalia.state.get("apps") or {}
+local hovered = nil
+local render
+
+local function openPanel()
+  noctalia.togglePanel("bennypowers/background-apps:list")
 end
 
-local function parseFlatpakPs(output)
-  local result = {}
-  for line in output:gmatch("[^\n]+") do
-    local parts = {}
-    for p in line:gmatch("%S+") do table.insert(parts, p) end
-    if #parts >= 3 then
-      table.insert(result, parts[3])
-    end
-  end
-  return result
-end
-
-local function parseNiriWindows(output)
-  local seen = {}
-  local result = {}
-  for appId in output:gmatch('App ID:%s*"([^"]+)"') do
-    if not seen[appId] then
-      seen[appId] = true
-      table.insert(result, appId)
-    end
-  end
-  return result
-end
-
-local function updateDisplay()
-  local count = #apps
-  barWidget.setVisible(count > 0)
-  if count > 0 then
-    barWidget.setGlyph("apps")
-    barWidget.setText(tostring(count))
-    local tooltip = count .. " background app" .. (count ~= 1 and "s" or "")
-    barWidget.setTooltip(tooltip)
-  end
-  noctalia.state.set("apps", apps)
-end
-
-local function fallbackDetect()
-  noctalia.runAsync("flatpak ps --columns=instance,pid,application,runtime", function(fpResult)
-    local flatpaks = {}
-    if fpResult.exitCode == 0 then
-      flatpaks = parseFlatpakPs(fpResult.stdout)
-    end
-
-    noctalia.runAsync("niri msg windows", function(nResult)
-      local windowed = {}
-      if nResult.exitCode == 0 then
-        windowed = parseNiriWindows(nResult.stdout)
-      end
-
-      local windowSet = {}
-      for _, id in ipairs(windowed) do windowSet[id] = true end
-
-      apps = {}
-      for _, id in ipairs(flatpaks) do
-        if not windowSet[id] then
-          table.insert(apps, { appId = id, message = "" })
-        end
-      end
-      updateDisplay()
-    end)
-  end)
-end
-
-local function refresh()
-  if portalWorked then
-    noctalia.runAsync("gdbus call --session --dest org.freedesktop.background.Monitor --object-path /org/freedesktop/background/monitor --method org.freedesktop.DBus.Properties.Get org.freedesktop.background.Monitor BackgroundApps", function(result)
-      if result.exitCode == 0 and result.stdout ~= "" then
-        local parsed = parsePortalOutput(result.stdout)
-        if #parsed > 0 then
-          apps = parsed
-          updateDisplay()
-          return
-        end
-      end
-      portalWorked = false
-      fallbackDetect()
-    end)
+local function item(app)
+  local icon
+  if app.iconPath then
+    icon = ui.image({
+      path = app.iconPath,
+      width = 16,
+      height = 16,
+      fit = "contain",
+    })
   else
-    fallbackDetect()
+    icon = ui.glyph({ name = "app-window", size = 16 })
   end
+
+  return ui.row({
+    key = app.appId,
+    width = 16,
+    height = 16,
+    align = "center",
+    justify = "center",
+    radius = 4,
+    fill = hovered == app.appId and "on_surface/0.12" or nil,
+    tooltip = app.tooltip or app.name or app.appId,
+    onClick = openPanel,
+    onHover = function(state)
+      hovered = state == "true" and app.appId or nil
+      render()
+    end,
+  }, { icon })
 end
 
-local function initialDetect()
-  noctalia.runAsync("gdbus call --session --dest org.freedesktop.background.Monitor --object-path /org/freedesktop/background/monitor --method org.freedesktop.DBus.Properties.Get org.freedesktop.background.Monitor BackgroundApps", function(result)
-    if result.exitCode == 0 and result.stdout ~= "" then
-      local parsed = parsePortalOutput(result.stdout)
-      if #parsed > 0 then
-        portalWorked = true
-        apps = parsed
-        updateDisplay()
-        return
-      end
-    end
-    fallbackDetect()
-  end)
+function render()
+  if #apps == 0 then
+    barWidget.setVisible(false)
+    return
+  end
+
+  local children = {}
+  for _, app in ipairs(apps) do
+    table.insert(children, item(app))
+  end
+
+  local container = barWidget.isVertical() and ui.column or ui.row
+  barWidget.render(container({ gap = 4, align = "center" }, children))
+  barWidget.setVisible(true)
 end
 
-barWidget.setGlyph("apps")
-barWidget.setVisible(false)
-initialDetect()
+noctalia.state.watch("apps", function(value)
+  apps = value or {}
+  hovered = nil
+  render()
+end)
 
-function update()
-  noctalia.setUpdateInterval(updateInterval)
-  refresh()
-end
+render()
 
 function onClick()
-  noctalia.togglePanel("bennypowers/background-apps:list")
+  openPanel()
 end

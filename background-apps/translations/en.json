@@ -1,0 +1,10 @@
+{
+  "title": "Background Apps",
+  "empty": "No background apps running",
+  "settings": {
+    "update_interval": {
+      "label": "Update Interval",
+      "description": "How often to check for background apps, in milliseconds"
+    }
+  }
+}
