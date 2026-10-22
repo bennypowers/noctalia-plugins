@@ -1,0 +1,36 @@
+{
+  "settings": {
+    "ups_name": {
+      "label": "UPS Name",
+      "description": "UPS to monitor (leave empty for auto-detect)"
+    },
+    "update_interval": {
+      "label": "Update Interval",
+      "description": "Polling interval in milliseconds"
+    },
+    "show_power_draw": {
+      "label": "Show Power Draw",
+      "description": "Display current power draw in watts"
+    },
+    "show_battery_only_on_battery": {
+      "label": "Show Battery % Only on Battery",
+      "description": "Hide percentage when UPS is on mains power"
+    },
+    "battery_color": {
+      "label": "On-Battery Color",
+      "description": "Color for battery icon when UPS is on battery power",
+      "options": {
+        "auto": "Auto (Default)",
+        "tertiary": "Tertiary (Blue)",
+        "warning": "Warning (Amber)",
+        "error": "Error (Red)",
+        "primary": "Primary",
+        "onsurface": "Surface (Neutral)"
+      }
+    },
+    "power_factor": {
+      "label": "Power Factor",
+      "description": "Ratio of real power to apparent power (typically 0.6-0.9)"
+    }
+  }
+}
