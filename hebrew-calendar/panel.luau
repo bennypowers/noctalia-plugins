@@ -72,7 +72,10 @@ local function toHebrewNumeral(num)
 end
 
 local function hebrewNumeralToInt(numeral)
-  local cleaned = numeral:gsub("[׳״]", "")
+  local asNum = tonumber(numeral)
+  if asNum then return asNum end
+  local cleaned = numeral:gsub("׳", ""):gsub("״", "")
+  if not utf8.len(cleaned) then return 1 end
   local onesMap = { ["א"]=1,["ב"]=2,["ג"]=3,["ד"]=4,["ה"]=5,["ו"]=6,["ז"]=7,["ח"]=8,["ט"]=9 }
   local tensMap = { ["י"]=10,["כ"]=20,["ל"]=30,["מ"]=40,["נ"]=50,["ס"]=60,["ע"]=70,["פ"]=80,["צ"]=90 }
   local hundredsMap = { ["ק"]=100,["ר"]=200,["ש"]=300,["ת"]=400 }
@@ -291,16 +294,17 @@ local function buildCalendarSection()
   local dayNames = {"ש", "ו", "ה", "ד", "ג", "ב", "א"}
   local dayLabels = {}
   for _, d in ipairs(dayNames) do
-    table.insert(dayLabels, ui.label({
-      text = d,
-      fontSize = 12,
-      fontWeight = "bold",
-      color = "primary",
-      width = 36,
-      textAlign = "center",
+    table.insert(dayLabels, ui.column({ width = 40, align = "center" }, {
+      ui.label({
+        text = d,
+        fontSize = 12,
+        fontWeight = "bold",
+        color = "primary",
+        textAlign = "center",
+      }),
     }))
   end
-  table.insert(children, ui.row({ gap = 2, justify = "space_between" }, dayLabels))
+  table.insert(children, ui.row({ gap = 0, justify = "space_between" }, dayLabels))
 
   local days = {}
   local prevLen = prevMonthLength(currentMonth)
@@ -324,28 +328,37 @@ local function buildCalendarSection()
       local d = days[idx]
       if d then
         local color = "on_surface"
-        local bg = nil
-        if d.today then color = "on_secondary"; bg = "secondary" end
-        if not d.current then color = "on_surface_variant" end
         local opacity = d.current and 1.0 or 0.4
+        if not d.current then color = "on_surface_variant" end
 
-        table.insert(cells, ui.box({
-          width = 36, height = 32, radius = 8,
-          fill = bg,
-          onClick = nil,
-        }, {
-          ui.label({
-            text = toHebrewNumeral(d.day),
-            fontSize = 13,
-            fontWeight = d.today and "bold" or "medium",
-            color = color,
-            opacity = opacity,
-            textAlign = "center",
-          }),
-        }))
+        if d.today then
+          table.insert(cells, ui.column({
+            width = 40, height = 36, align = "center", justify = "center",
+            fill = "secondary", radius = 8,
+          }, {
+            ui.label({
+              text = toHebrewNumeral(d.day),
+              fontSize = 13,
+              fontWeight = "bold",
+              color = "on_secondary",
+              textAlign = "center",
+            }),
+          }))
+        else
+          table.insert(cells, ui.column({ width = 40, height = 36, align = "center", justify = "center" }, {
+            ui.label({
+              text = toHebrewNumeral(d.day),
+              fontSize = 13,
+              fontWeight = "medium",
+              color = color,
+              opacity = opacity,
+              textAlign = "center",
+            }),
+          }))
+        end
       end
     end
-    table.insert(children, ui.row({ gap = 2, justify = "space_between" }, cells))
+    table.insert(children, ui.row({ gap = 0, justify = "space_between" }, cells))
   end
 
   return ui.column({ gap = 4, padding = 12, fill = "surface_variant", radius = 12 }, children)
@@ -366,19 +379,16 @@ local function buildZmanimSection()
     if z.status == "passed" then opacity = 0.5
     elseif z.status == "next" then color = "primary" end
 
-    local bg = (i % 2 == 0) and "surface_variant" or nil
     table.insert(children, ui.row({
       justify = "space_between",
       padding = 4,
-      fill = bg,
-      radius = 4,
     }, {
       ui.label({ text = z.name, fontSize = 13, color = color, opacity = opacity }),
       ui.label({ text = z.time, fontSize = 13, color = color, opacity = opacity }),
     }))
   end
 
-  return ui.scroll({ gap = 2, maxHeight = 200, radius = 8 }, children)
+  return ui.column({ gap = 2, padding = 12, fill = "surface_variant", radius = 12 }, children)
 end
 
 local function buildShabbatSection()

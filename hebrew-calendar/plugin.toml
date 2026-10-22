@@ -50,5 +50,5 @@ entry = "widget.luau"
 id        = "calendar"
 entry     = "panel.luau"
 width     = 420
-height    = "fill"
+height    = 900
 placement = "attached"
