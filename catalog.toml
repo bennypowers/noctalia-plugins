@@ -1,31 +1,45 @@
 [[plugin]]
-id           = "bennypowers/nut-status"
-name         = "NUT UPS Status"
-version      = "2.0.0"
-author       = "bennypowers"
-license      = "GPL-3.0"
-description  = "Bar widget showing UPS battery status from Network UPS Tools (NUT)"
-min_noctalia = "5.0.0"
-tags         = ["ups", "battery", "power", "nut"]
+id          = "bennypowers/nut-status"
+name        = "NUT UPS Status"
+version     = "2.1.0"
+author      = "bennypowers"
+license     = "GPL-3.0"
+icon        = "battery"
+description = "Bar widget showing UPS battery status from Network UPS Tools (NUT)"
+plugin_api  = 3
+tags        = ["ups", "battery", "power", "nut"]
 dependencies = ["nut"]
 
 [[plugin]]
-id           = "bennypowers/hebrew-calendar"
-name         = "Hebrew Calendar"
-version      = "2.0.0"
-author       = "bennypowers"
-license      = "GPL-3.0"
-description  = "Display current Hebrew date in the bar with full calendar panel"
-min_noctalia = "5.0.0"
-tags         = ["hebrew", "calendar", "jewish", "zmanim", "shabbat"]
+id          = "bennypowers/hebrew-calendar"
+name        = "Hebrew Calendar"
+version     = "2.1.0"
+author      = "bennypowers"
+license     = "GPL-3.0"
+icon        = "calendar"
+description = "Display current Hebrew date in the bar with full calendar panel"
+plugin_api  = 3
+tags        = ["hebrew", "calendar", "jewish", "zmanim", "shabbat"]
 dependencies = ["hebcal"]
 
 [[plugin]]
-id           = "bennypowers/background-apps"
-name         = "Background Apps"
-version      = "2.0.0"
-author       = "bennypowers"
-license      = "GPL-3.0"
-description  = "Display Freedesktop background apps in the bar"
-min_noctalia = "5.0.0"
-tags         = ["background", "apps", "flatpak", "portal"]
+id          = "bennypowers/background-apps"
+name        = "Background Apps"
+version     = "2.1.0"
+author      = "bennypowers"
+license     = "GPL-3.0"
+icon        = "apps"
+description = "Display Freedesktop background apps in the bar"
+plugin_api  = 34
+tags        = ["background", "apps", "flatpak", "portal"]
+
+[[plugin]]
+id          = "bennypowers/thread-bars"
+name        = "CPU Thread Bars"
+version     = "2.0.0"
+author      = "bennypowers"
+license     = "GPL-3.0"
+icon        = "cpu"
+description = "Per-core CPU load bars styled like the built-in sysmon gauge"
+plugin_api  = 32
+tags        = ["cpu", "sysmon", "monitor", "system"]
