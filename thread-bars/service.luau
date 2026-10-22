@@ -1,14 +1,8 @@
 --!nonstrict
--- Samples per-core CPU usage once per interval and publishes both the current
--- values (for the animated bar) and a rolling history (for the details panel).
-
-local history = require("./lib/history.luau")
+-- Samples per-core CPU usage once per interval and publishes the current values.
+-- The widget animates them; the details panel keeps its own rolling history.
 
 local sampleInterval = noctalia.getConfig("updateInterval") or 1000
-local MAX_SAMPLES = 30
-
-local coreHistory = {}
-local overallHistory = {}
 local lastCores = nil
 
 local function unchanged(a, b)
@@ -28,21 +22,11 @@ local function sample()
     current[index] = math.max(0, math.min(100, value or 0))
   end
 
-  -- The host samples per-core usage on its own 1 s cadence. When this service
-  -- polls faster, or lands just before the host's update, cpuCores() returns
-  -- the same sample again; appending it would double-shift the graph.
+  -- The host samples per-core usage on its own 1 s cadence. Skip a poll that
+  -- returns the same sample again so the panel does not append duplicates.
   if unchanged(current, lastCores) then return end
   lastCores = current
-
-  coreHistory = history.pushCores(coreHistory, current, MAX_SAMPLES)
-  overallHistory = history.push(overallHistory, history.average(current), MAX_SAMPLES)
-
   noctalia.state.set("cores", current)
-  noctalia.state.set("history", {
-    cores = coreHistory,
-    overall = overallHistory,
-    intervalMs = sampleInterval,
-  })
 end
 
 noctalia.setUpdateInterval(sampleInterval)

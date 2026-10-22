@@ -128,6 +128,39 @@ test("fill window reuses and trims the target table", function()
   near(points[5], 0.30, 0.001, "last")
 end)
 
+test("roll appends one sample worth of grid points to a densified history", function()
+  local before = { 10, 20, 30, 40, 50 }
+  local after = { 20, 30, 40, 50, 60 }
+  local dense = history.densify(before, 4, 55)
+  local rolled = history.roll(dense, after, 4, 65)
+  local fresh = history.densify(after, 4, 65)
+  eq(#rolled, #fresh, "count")
+  for index = 1, #fresh do
+    near(rolled[index], fresh[index], 0.0001, "point " .. index)
+  end
+end)
+
+test("roll rejects a history that did not shift by exactly one sample", function()
+  local before = { 10, 20, 30, 40, 50 }
+  local dense = history.densify(before, 4, 55)
+  eq(history.roll(dense, { 10, 20, 30, 40, 50 }, 4, 55, before), nil, "unshifted")
+  eq(history.roll(dense, { 30, 40, 50, 60, 70 }, 4, 75, before), nil, "skipped a sample")
+end)
+
+test("roll falls back when the history length changed", function()
+  local dense = history.densify({ 10, 20, 30 }, 2, 35)
+  eq(history.roll(dense, { 20, 30, 40, 50 }, 2, 55), nil, "mismatched count")
+end)
+
+test("roll matches densify for a short padded history", function()
+  local dense = history.densify({ 0, 0, 10 }, 3, 20)
+  local rolled = history.roll(dense, { 0, 10, 20 }, 3, 30)
+  local fresh = history.densify({ 0, 10, 20 }, 3, 30)
+  for index = 1, #fresh do
+    near(rolled[index], fresh[index], 0.0001, "point " .. index)
+  end
+end)
+
 test("dense window handles a single sample", function()
   local dense = history.densify({ 40 }, 2)
   eq(#dense, 3, "dense count")

@@ -12,6 +12,10 @@ local LEGEND_COLUMNS = 6
 local ANIMATION_FRAME_MS = 33
 local SCROLL_SUBDIVISIONS = 16
 local MAX_SAMPLES = 30
+local sampleInterval = noctalia.getConfig("updateInterval") or 1000
+
+local coreHistory = {}
+local overallHistory = {}
 
 local base = nil
 local nextSample = nil
@@ -21,6 +25,8 @@ local graphSlots = {}
 local overallSlot = nil
 local denseCores = {}
 local denseOverall = {}
+local denseSourceCores = {}
+local denseSourceOverall = nil
 
 local isOpen = false
 local accumulatedMs = 0
@@ -73,7 +79,12 @@ local function padded(values)
 end
 
 local function rebuildDense()
+  local previousCores = denseCores
+  local previousSources = denseSourceCores
+  local previousOverall = denseOverall
+  local previousOverallSource = denseSourceOverall
   denseCores = {}
+  denseSourceCores = {}
   local sameCores = nextSample and #nextSample.cores == #base.cores
 
   for index, values in ipairs(base.cores or {}) do
@@ -81,11 +92,30 @@ local function rebuildDense()
     if sameCores and nextSample.cores[index] then
       lead = latest(nextSample.cores[index])
     end
-    denseCores[index] = history.densify(padded(values), SCROLL_SUBDIVISIONS, lead)
+    local window = padded(values)
+    denseSourceCores[index] = window
+    -- A densified history only changes at the front and the lead when the
+    -- window rolls one sample; copying the interior keeps the frame callback
+    -- under its CPU budget.
+    denseCores[index] = history.roll(
+      previousCores[index],
+      window,
+      SCROLL_SUBDIVISIONS,
+      lead,
+      previousSources[index]
+    ) or history.densify(window, SCROLL_SUBDIVISIONS, lead)
   end
 
   local overallLead = nextSample and sameCores and latest(nextSample.overall) or nil
-  denseOverall = history.densify(padded(base.overall or {}), SCROLL_SUBDIVISIONS, overallLead)
+  local overallWindow = padded(base.overall or {})
+  denseSourceOverall = overallWindow
+  denseOverall = history.roll(
+    previousOverall,
+    overallWindow,
+    SCROLL_SUBDIVISIONS,
+    overallLead,
+    previousOverallSource
+  ) or history.densify(overallWindow, SCROLL_SUBDIVISIONS, overallLead)
 end
 
 -- Graph exposes two series per node, so pairs of cores share a layer. A
@@ -326,7 +356,7 @@ local function paint(offset)
 end
 
 local function intervalMs()
-  return base and base.intervalMs and base.intervalMs > 0 and base.intervalMs or 1000
+  return sampleInterval > 0 and sampleInterval or 1000
 end
 
 local function currentProgress()
@@ -378,19 +408,40 @@ local function acceptSample(value)
   if #pending > 4 then table.remove(pending, 1) end
 end
 
-noctalia.state.watch("history", function(value)
-  if isOpen then acceptSample(value) end
+local function snapshotFromCores(cores)
+  local current = {}
+  for index, value in ipairs(cores) do
+    current[index] = math.max(0, math.min(100, value or 0))
+  end
+  coreHistory = history.pushCores(coreHistory, current, MAX_SAMPLES)
+  overallHistory = history.push(overallHistory, history.average(current), MAX_SAMPLES)
+  return { cores = coreHistory, overall = overallHistory }
+end
+
+noctalia.state.watch("cores", function(value)
+  if not isOpen or not value or #value == 0 then return end
+  acceptSample(snapshotFromCores(value))
 end)
 
 function onOpen()
   isOpen = true
   pending = {}
   nextSample = nil
-  base = noctalia.state.get("history") or { cores = {}, overall = {} }
-  rebuildDense()
-  buildTree()
-  lastOffset = 0
-  paint(0)
+  base = nil
+  coreHistory = {}
+  overallHistory = {}
+
+  local cores = noctalia.state.get("cores")
+  if cores and #cores > 0 then
+    acceptSample(snapshotFromCores(cores))
+  else
+    base = { cores = {}, overall = {} }
+    rebuildDense()
+    buildTree()
+    lastOffset = 0
+    paint(0)
+  end
+
   panel.setNeedsFrameTick(true)
 end
 

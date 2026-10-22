@@ -115,6 +115,103 @@ function M.densify(values, subdivisions, lead)
   return out
 end
 
+-- Rolls a densified history forward by one coarse sample. A shift of the
+-- window changes only the first segment (its p0 falls off the front) and the
+-- lead, so the interior grid can be copied instead of recomputed. Returns nil
+-- when the history length changed and the caller must densify from scratch.
+function M.roll(dense, values, subdivisions, lead, previousValues)
+  subdivisions = math.max(1, math.floor(subdivisions or 1))
+  local count = #(values or {})
+  if not dense or count < 3 or #dense ~= count * subdivisions + 1 then return nil end
+
+  -- Only a one-sample shift keeps the interior segments identical. A dropped
+  -- sample (or a fresh history) must take the full densify path.
+  if previousValues then
+    if #previousValues ~= count then return nil end
+    for index = 1, count - 1 do
+      if values[index] ~= previousValues[index + 1] then return nil end
+    end
+  end
+
+  local newest = values[count]
+  local previous = values[count - 1]
+  lead = math.max(0, math.min(100, lead or (newest + (newest - previous) * 0.5)))
+
+  local samples = timeSamples(subdivisions)
+  local t1, t2, t3 = samples[1], samples[2], samples[3]
+
+  local out = {}
+  local length = 0
+  local p0 = values[0] or values[1]
+  local p1 = values[1]
+  local p2 = values[2]
+  local p3 = values[3] or p2
+
+  local a = 2 * p1
+  local b = -p0 + p2
+  local c = 2 * p0 - 5 * p1 + 4 * p2 - p3
+  local d = -p0 + 3 * p1 - 3 * p2 + p3
+
+  for step = 1, subdivisions do
+    local value = 0.5 * (a + b * t1[step] + c * t2[step] + d * t3[step])
+    if value < 0 then value = 0 elseif value > 100 then value = 100 end
+    length = length + 1
+    out[length] = value * 0.01
+  end
+
+  -- Interior segments 3..count-2 are unchanged, shifted left by one segment.
+  -- The old final segment was clamped against the old newest sample, so the
+  -- last two segments have to be evaluated.
+  local copyFirst = subdivisions * 2 + 1
+  local copyLast = (count - 2) * subdivisions
+  if copyLast >= copyFirst then
+    if table.move then
+      table.move(dense, copyFirst, copyLast, length + 1, out)
+    else
+      for index = copyFirst, copyLast do
+        length = length + 1
+        out[length] = dense[index]
+      end
+    end
+  end
+  length = (count - 3) * subdivisions
+
+  for segment = count - 2, count - 1 do
+    p0 = (segment == 1) and (values[0] or values[1]) or values[segment - 1]
+    p1 = values[segment]
+    p2 = values[segment + 1]
+    p3 = values[segment + 2] or p2
+
+    a = 2 * p1
+    b = -p0 + p2
+    c = 2 * p0 - 5 * p1 + 4 * p2 - p3
+    d = -p0 + 3 * p1 - 3 * p2 + p3
+    for step = 1, subdivisions do
+      local value = 0.5 * (a + b * t1[step] + c * t2[step] + d * t3[step])
+      if value < 0 then value = 0 elseif value > 100 then value = 100 end
+      length = length + 1
+      out[length] = value * 0.01
+    end
+  end
+
+  length = length + 1
+  out[length] = newest * 0.01
+
+  a = 2 * newest
+  b = -previous + lead
+  c = 2 * previous - 5 * newest + 4 * lead - lead
+  d = -previous + 3 * newest - 3 * lead + lead
+  for step = 1, subdivisions do
+    local t = step / subdivisions
+    local t2 = t * t
+    local value = 0.5 * (a + b * t + c * t2 + d * t2 * t)
+    if value < 0 then value = 0 elseif value > 100 then value = 100 end
+    length = length + 1
+    out[length] = value * 0.01
+  end
+  return out
+end
+
 -- Returns a fixed-length window of a densified history at an integer grid
 -- offset. Because the offset lands on the grid, consecutive frames are exact
 -- translations of one another: the old line never changes shape.

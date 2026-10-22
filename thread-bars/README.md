@@ -12,7 +12,7 @@ monitor's CPU activity and critical thresholds, so the widget follows the same v
 On a vertical bar, the stems rotate to horizontal and stack in a column.
 
 Between samples the stems ease toward their new values with a frame-rate independent interpolation. The widget runs a
-50 ms tick while animating, then idles once settled, so idle CPU cost stays low.
+60 ms tick while animating, then idles once settled, so idle CPU cost stays low.
 
 ## Details panel
 
@@ -42,13 +42,14 @@ requires the system monitor to be enabled:
 enabled = true
 ```
 
-The first sample arrives up to one second after the widget loads; until then the widget stays hidden.
+A sampler service publishes the current values; the widget animates them and the panel keeps a local 30-sample history.
+The first sample arrives up to one second after loading; until then the widget stays hidden.
 
 ## Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `updateInterval` | 1000 | Sample interval in milliseconds; bars animate between samples and the panel keeps 60 points |
+| `updateInterval` | 1000 | Sample interval in milliseconds; bars animate between samples and the panel keeps 30 points |
 | `highlightColor` | `error` | Palette role the bars tint toward at high usage |
 
 Thresholds come from the shell config:

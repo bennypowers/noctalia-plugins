@@ -17,9 +17,9 @@ local STEM_HEIGHT = 17
 local STEM_GAP = 2
 local STEM_RADIUS = 2
 
--- Bar widgets have no frame-tick API. Tick quickly only while easing, then
--- idle until the sampler service publishes the next sample.
-local ANIMATION_TICK_MS = 50
+-- Bar widgets have no frame-tick API. Tick while easing, then idle until the
+-- sampler service publishes the next sample.
+local ANIMATION_TICK_MS = 60
 local IDLE_TICK_MS = 1000
 local SMOOTHING_TAU_MS = 110
 
@@ -28,13 +28,20 @@ local display = nil
 local lastTickAt = 0
 local currentTickMs = nil
 
+-- The palette only changes on a theme switch, and usage is quantized to whole
+-- percentages, so fill/track strings are cached instead of rebuilt per frame.
+local fillCache = {}
+local trackCache = {}
+local cachedBaseHex = nil
+local cachedHighlightHex = nil
+
 local function palette()
-  local base = noctalia.getColor("on_surface")
-  if not base then
-    base = noctalia.isDarkMode() and "#ffffff" or "#000000"
+  local baseHex = noctalia.getColor("on_surface")
+  if not baseHex then
+    baseHex = noctalia.isDarkMode() and "#ffffff" or "#000000"
   end
-  local highlight = noctalia.getColor(highlightRole) or noctalia.getColor("error") or "#ff0000"
-  return color.parseHex(base), color.parseHex(highlight)
+  local highlightHex = noctalia.getColor(highlightRole) or noctalia.getColor("error") or "#ff0000"
+  return baseHex, highlightHex, color.parseHex(baseHex), color.parseHex(highlightHex)
 end
 
 local function coreFill(usage, base, highlight)
@@ -83,10 +90,17 @@ local function render(cores)
     return
   end
 
-  local base, highlight = palette()
+  local baseHex, highlightHex, base, highlight = palette()
   if not (base and highlight) then
     barWidget.setVisible(false)
     return
+  end
+
+  if baseHex ~= cachedBaseHex or highlightHex ~= cachedHighlightHex then
+    fillCache = {}
+    trackCache = {}
+    cachedBaseHex = baseHex
+    cachedHighlightHex = highlightHex
   end
 
   local vertical = barWidget.isVertical()
@@ -94,8 +108,14 @@ local function render(cores)
 
   for index, raw in ipairs(cores) do
     local usage = math.max(0, math.min(100, raw or 0))
-    local fill = coreFill(usage, base, highlight)
-    children[#children + 1] = stem(index, usage, fill, color.withAlpha(fill, 0.3), vertical)
+    local usageKey = math.floor(usage + 0.5)
+    local fill = fillCache[usageKey]
+    if not fill then
+      fill = coreFill(usageKey, base, highlight)
+      fillCache[usageKey] = fill
+      trackCache[fill] = color.withAlpha(fill, 0.3)
+    end
+    children[#children + 1] = stem(index, usage, fill, trackCache[fill], vertical)
   end
 
   local container = vertical and ui.column or ui.row
