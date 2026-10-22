@@ -11,11 +11,10 @@ local GRAPH_HEIGHT = 260
 local LEGEND_COLUMNS = 6
 local ANIMATION_FRAME_MS = 33
 local SCROLL_SUBDIVISIONS = 16
+-- The sampler service retains a few extra samples; the graph draws the newest
+-- 30 so the x-axis span stays fixed.
 local MAX_SAMPLES = 30
 local sampleInterval = noctalia.getConfig("updateInterval") or 1000
-
-local coreHistory = {}
-local overallHistory = {}
 
 local base = nil
 local nextSample = nil
@@ -27,6 +26,10 @@ local denseCores = {}
 local denseOverall = {}
 local denseSourceCores = {}
 local denseSourceOverall = nil
+-- A flat series looks identical at every scroll offset, so scrolling it would
+-- redraw the whole tree for no visible change.
+local denseFlat = false
+local flatPainted = false
 
 local isOpen = false
 local accumulatedMs = 0
@@ -75,10 +78,11 @@ local function peak(values)
 end
 
 local function padded(values)
-  return history.padLeft(values or {}, MAX_SAMPLES, 0)
+  return history.padLeft(history.tail(values, MAX_SAMPLES), MAX_SAMPLES, 0)
 end
 
 local function rebuildDense()
+  local allFlat = true
   local previousCores = denseCores
   local previousSources = denseSourceCores
   local previousOverall = denseOverall
@@ -94,6 +98,7 @@ local function rebuildDense()
     end
     local window = padded(values)
     denseSourceCores[index] = window
+    if allFlat and not history.isFlat(window, lead) then allFlat = false end
     -- A densified history only changes at the front and the lead when the
     -- window rolls one sample; copying the interior keeps the frame callback
     -- under its CPU budget.
@@ -109,6 +114,7 @@ local function rebuildDense()
   local overallLead = nextSample and sameCores and latest(nextSample.overall) or nil
   local overallWindow = padded(base.overall or {})
   denseSourceOverall = overallWindow
+  if allFlat and not history.isFlat(overallWindow, overallLead) then allFlat = false end
   denseOverall = history.roll(
     previousOverall,
     overallWindow,
@@ -116,6 +122,9 @@ local function rebuildDense()
     overallLead,
     previousOverallSource
   ) or history.densify(overallWindow, SCROLL_SUBDIVISIONS, overallLead)
+
+  denseFlat = allFlat
+  if not denseFlat then flatPainted = false end
 end
 
 -- Graph exposes two series per node, so pairs of cores share a layer. A
@@ -165,6 +174,9 @@ local function layeredGraph(series, overallValues, overallColor)
   }, layers)
 end
 
+-- One label per core instead of a swatch box plus a label: the declarative
+-- tree is re-read on every scroll frame, and per-node cost dominates, so this
+-- keeps the legend legible at a third of the node count.
 local function legend(coreHistory, colors)
   local rows = {}
   for first = 1, #coreHistory, LEGEND_COLUMNS do
@@ -172,19 +184,13 @@ local function legend(coreHistory, colors)
     local last = math.min(first + LEGEND_COLUMNS - 1, #coreHistory)
     for index = first, last do
       local usage = latest(coreHistory[index])
-      cells[#cells + 1] = ui.row({
+      cells[#cells + 1] = ui.label({
         key = "legend-" .. index,
         width = 74,
-        gap = 4,
-        align = "center",
-      }, {
-        ui.box({ width = 8, height = 8, radius = 2, fill = colors[index] }),
-        ui.label({
-          text = string.format("C%d %d%%", index - 1, math.floor(usage + 0.5)),
-          fontSize = 10,
-          color = "on_surface_variant",
-          maxLines = 1,
-        }),
+        text = string.format("■ C%d %d%%", index - 1, math.floor(usage + 0.5)),
+        fontSize = 10,
+        color = colors[index],
+        maxLines = 1,
       })
     end
     rows[#rows + 1] = ui.row({ gap = 4, justify = "space_between" }, cells)
@@ -195,6 +201,7 @@ end
 -- Builds the full tree once per adopted sample. Frame ticks then repaint only
 -- the graph node values, keeping the callback under its CPU budget.
 local function buildTree()
+  flatPainted = false
   graphSlots = {}
   overallSlot = nil
 
@@ -211,6 +218,7 @@ local function buildTree()
   }))
 
   local overallHistory = base.overall or {}
+  local visibleOverall = history.tail(overallHistory, MAX_SAMPLES)
   local coreHistory = base.cores or {}
 
   if #overallHistory == 0 then
@@ -254,12 +262,12 @@ local function buildTree()
 
   local stats = {
     ui.label({
-      text = string.format("%s %d%%", noctalia.tr("panel.peak"), math.floor(peak(overallHistory) + 0.5)),
+      text = string.format("%s %d%%", noctalia.tr("panel.peak"), math.floor(peak(visibleOverall) + 0.5)),
       fontSize = 11,
       color = "on_surface_variant",
     }),
     ui.label({
-      text = string.format("%s %d%%", noctalia.tr("panel.average"), math.floor(average(overallHistory) + 0.5)),
+      text = string.format("%s %d%%", noctalia.tr("panel.average"), math.floor(average(visibleOverall) + 0.5)),
       fontSize = 11,
       color = "on_surface_variant",
     }),
@@ -331,6 +339,7 @@ local overallValues = {}
 
 local function paint(offset)
   if not tree then return end
+  if denseFlat and flatPainted then return end
 
   for _, slot in ipairs(graphSlots) do
     slot.values = slot.values or {}
@@ -353,6 +362,7 @@ local function paint(offset)
   end
 
   panel.render(tree)
+  flatPainted = denseFlat
 end
 
 local function intervalMs()
@@ -408,19 +418,9 @@ local function acceptSample(value)
   if #pending > 4 then table.remove(pending, 1) end
 end
 
-local function snapshotFromCores(cores)
-  local current = {}
-  for index, value in ipairs(cores) do
-    current[index] = math.max(0, math.min(100, value or 0))
-  end
-  coreHistory = history.pushCores(coreHistory, current, MAX_SAMPLES)
-  overallHistory = history.push(overallHistory, history.average(current), MAX_SAMPLES)
-  return { cores = coreHistory, overall = overallHistory }
-end
-
-noctalia.state.watch("cores", function(value)
-  if not isOpen or not value or #value == 0 then return end
-  acceptSample(snapshotFromCores(value))
+noctalia.state.watch("history", function(value)
+  if not isOpen or not value or not value.cores or #value.cores == 0 then return end
+  acceptSample(value)
 end)
 
 function onOpen()
@@ -428,19 +428,14 @@ function onOpen()
   pending = {}
   nextSample = nil
   base = nil
-  coreHistory = {}
-  overallHistory = {}
 
-  local cores = noctalia.state.get("cores")
-  if cores and #cores > 0 then
-    acceptSample(snapshotFromCores(cores))
-  else
-    base = { cores = {}, overall = {} }
-    rebuildDense()
-    buildTree()
-    lastOffset = 0
-    paint(0)
+  -- The sampler keeps recording while the panel is closed, so the graph opens
+  -- on the real recent window instead of an empty one.
+  local snapshot = noctalia.state.get("history")
+  if not snapshot or not snapshot.cores or #snapshot.cores == 0 then
+    snapshot = { cores = {}, overall = {} }
   end
+  acceptSample(snapshot)
 
   panel.setNeedsFrameTick(true)
 end

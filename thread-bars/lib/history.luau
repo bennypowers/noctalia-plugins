@@ -22,6 +22,29 @@ function M.average(values)
   return total / #values
 end
 
+-- True when a window and its lead describe a horizontal line, so scrolling it
+-- cannot change any pixel.
+function M.isFlat(values, lead)
+  if not values or #values == 0 then return false end
+  local first = values[1]
+  for index = 2, #values do
+    if values[index] ~= first then return false end
+  end
+  return lead == nil or lead == first
+end
+
+-- Returns a copy of the newest `length` samples. Retained histories can carry
+-- a safety margin beyond the visible window; the graph only draws the tail.
+function M.tail(values, length)
+  values = values or {}
+  length = math.max(0, math.floor(length or 0))
+  local count = #values
+  local first = count > length and count - length + 1 or 1
+  local out = {}
+  for index = first, count do out[#out + 1] = values[index] end
+  return out
+end
+
 -- Pads a short history on the left so the graph's x-axis keeps a fixed span
 -- while the buffer fills.
 function M.padLeft(values, length, fill)

@@ -23,8 +23,9 @@ Click the widget to open a panel with:
 - overall CPU stats: peak, average, hottest core, and thread count
 
 Core colors are derived from the active theme's accent colors with golden-angle hue rotation, so high-core-count CPUs
-get distinct colors without leaving the current color scheme. The panel keeps the last 30 samples (30 seconds at the
-default 1 s interval) and scrolls the graph smoothly between samples, like the built-in sysmon graph.
+get distinct colors without leaving the current color scheme. The graph shows the last 30 samples (30 seconds at the
+default 1 s interval) and scrolls smoothly between samples, like the built-in sysmon graph. The sampler records that
+window continuously, so closing and reopening the panel does not break the graph.
 
 The graph scroll is rigid: short histories are left-padded to a fixed 30-sample span so the x-axis never squishes, the
 history is densified 16x with Catmull-Rom interpolation for smooth curves, and each frame advances an integer grid
@@ -42,8 +43,9 @@ requires the system monitor to be enabled:
 enabled = true
 ```
 
-A sampler service publishes the current values; the widget animates them and the panel keeps a local 30-sample history.
-The first sample arrives up to one second after loading; until then the widget stays hidden.
+A sampler service publishes the current values and a rolling 30-sample history. The history keeps recording while the
+details panel is closed, so reopening resumes with the real recent graph instead of starting empty. The panel draws the
+newest 30 samples. The first sample arrives up to one second after loading; until then the widget stays hidden.
 
 ## Settings
 
