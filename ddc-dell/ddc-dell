@@ -1,0 +1,98 @@
+#!/bin/bash
+# DDC/CI backend for the ddc-dell plugin (Dell U4025QW).
+#
+#   ddc-dell [--model NAME] state           raw `getvcp --terse` lines for the
+#                                           monitor's features
+#   ddc-dell [--model NAME] set CODE VALUE  write one VCP feature (whitelist)
+#   ddc-dell [--model NAME] action NAME     momentary Dell action (swap|kvm)
+#
+# --model picks the monitor by a (case-insensitive) substring of its DDC model
+# name; without it the first Dell monitor found is used.
+#
+# ddcutil calls are serialized with a lock: two DDC transactions on the same
+# bus at once garble each other and the monitor answers neither. The bus is
+# cached in $XDG_RUNTIME_DIR and re-detected once after a failed transaction,
+# because a PBP transition (or hotplug) re-enumerates the monitor and leaves
+# the cached bus stale ("EDID has changed").
+
+MODEL=""
+if [[ $1 == --model ]]; then
+  MODEL=$2
+  shift 2
+fi
+
+LOCK="${XDG_RUNTIME_DIR:-/tmp}/ddc-dell.lock"
+BUS_CACHE="${XDG_RUNTIME_DIR:-/tmp}/ddc-dell.${MODEL//[^A-Za-z0-9]/_}.bus"
+
+# 10 brightness, 12 contrast, 14 colour preset, 60 input (main window),
+# 62 volume, 8D mute, DC display mode, E8 PBP sub-window input (Dell),
+# E9 PIP/PBP layout (Dell).
+CODES=(10 12 14 60 62 8D DC E8 E9)
+
+# Momentary 16-bit Dell action writes, effective only while PIP/PBP is on.
+# swap: E5 0xF001 video swap (main <-> sub window)
+# kvm:  E7 0xFF00 switch the USB/KVM upstream (experimental on the U4025QW)
+declare -A ACTIONS=( [swap]="E5 0xF001" [kvm]="E7 0xFF00" )
+
+bus() {
+  if [[ -s $BUS_CACHE ]]; then
+    cat "$BUS_CACHE"
+    return
+  fi
+  local found
+  found=$(ddcutil detect --terse 2>/dev/null | awk -v m="$MODEL" '
+    /I2C bus:/ { bus = $NF; sub(".*-", "", bus) }
+    /Monitor:/ && index($0, "DEL:") && index(tolower($0), tolower(m)) { print bus; exit }')
+  [[ -n $found ]] || return 1
+  echo "$found" | tee "$BUS_CACHE"
+}
+
+# Exits 75 if the lock can't be had within 10 s. --noverify is required: the
+# firmware applies writes asynchronously (~1 s for E9), so strict verify fails
+# even when the write works.
+ddc() {
+  local b
+  b=$(bus) || return 1
+  flock -w 10 -E 75 "$LOCK" ddcutil --bus "$b" --noverify "$@" 2>/dev/null
+}
+
+# The monitor may have re-hotplugged onto another bus: one retry on a freshly
+# detected bus.
+with_retry() {
+  local cached rc
+  [[ -s $BUS_CACHE ]] && cached=1
+  ddc "$@"
+  rc=$?
+  if ((rc != 0 && rc != 75)) && [[ $cached ]]; then
+    rm -f "$BUS_CACHE"
+    ddc "$@"
+    rc=$?
+  fi
+  if ((rc != 0 && rc != 75)); then
+    rm -f "$BUS_CACHE"
+  fi
+  return $rc
+}
+
+case $1 in
+  state)
+    # ddcutil exits non-zero if any requested feature is unsupported or no
+    # monitor is found, so success means at least one value came back.
+    with_retry --terse getvcp "${CODES[@]}"
+    ;;
+  set)
+    code=${2^^} value=$3
+    [[ " ${CODES[*]} " == *" $code "* ]] || { echo "refusing VCP code $code" >&2; exit 2; }
+    [[ $value =~ ^(0x[0-9a-fA-F]+|[0-9]+)$ ]] || { echo "bad value $value" >&2; exit 2; }
+    with_retry setvcp "$code" "$value"
+    ;;
+  action)
+    name=$2
+    [[ -n ${ACTIONS[$name]:-} ]] || { echo "unknown action $name" >&2; exit 2; }
+    with_retry setvcp ${ACTIONS[$name]}
+    ;;
+  *)
+    echo "usage: ddc-dell [--model NAME] state | set CODE VALUE | action NAME" >&2
+    exit 2
+    ;;
+esac

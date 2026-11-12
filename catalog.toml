@@ -34,6 +34,18 @@ plugin_api  = 34
 tags        = ["background", "apps", "flatpak", "portal"]
 
 [[plugin]]
+id          = "bennypowers/ddc-dell"
+name        = "Dell Display (DDC)"
+version     = "1.0.0"
+author      = "bennypowers"
+license     = "GPL-3.0"
+icon        = "display"
+description = "Bar widget and panel controlling a Dell display over DDC/CI via ddcutil, with human-readable PIP/PBP and KVM controls"
+plugin_api  = 24
+tags        = ["monitor", "ddc", "dell", "display", "pip", "kvm"]
+dependencies = ["ddcutil"]
+
+[[plugin]]
 id          = "bennypowers/thread-bars"
 name        = "CPU Thread Bars"
 version     = "2.1.0"

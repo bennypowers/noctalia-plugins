@@ -1,0 +1,48 @@
+id           = "bennypowers/ddc-dell"
+name         = "Dell Display (DDC)"
+version      = "1.0.0"
+plugin_api   = 24
+author       = "bennypowers"
+license      = "GPL-3.0"
+icon         = "display"
+description  = "Bar widget and panel controlling a Dell display over DDC/CI via ddcutil, with human-readable PIP/PBP and KVM controls"
+tags         = ["monitor", "ddc", "dell", "display", "pip", "kvm"]
+dependencies = ["ddcutil"]
+
+[[setting]]
+key             = "monitor"
+type            = "string"
+label_key       = "settings.monitor.label"
+description_key = "settings.monitor.description"
+default         = "U4025QW"
+
+[[setting]]
+key             = "updateInterval"
+type            = "int"
+label_key       = "settings.update_interval.label"
+description_key = "settings.update_interval.description"
+default         = 5000
+min             = 2000
+max             = 60000
+
+[[setting]]
+key             = "kvmSwitch"
+type            = "bool"
+label_key       = "settings.kvm_switch.label"
+description_key = "settings.kvm_switch.description"
+default         = true
+
+[[service]]
+id    = "poller"
+entry = "service.luau"
+
+[[widget]]
+id    = "ddc"
+entry = "widget.luau"
+
+[[panel]]
+id        = "control"
+entry     = "panel.luau"
+width     = 420
+height    = 800
+placement = "attached"
