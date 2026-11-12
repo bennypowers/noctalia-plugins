@@ -7,7 +7,7 @@ codes human-readable and pleasant to use.
 
 ## Features
 
-- **Bar widget** — monitor glyph with the current brightness; click opens the panel.
+- **Bar widget** — monitor glyph with the current brightness; scroll the wheel over it to adjust brightness (5% per detent); click opens the panel.
 - **Panel**
   - Sliders: brightness, contrast, volume (committed on release)
   - Mute toggle
