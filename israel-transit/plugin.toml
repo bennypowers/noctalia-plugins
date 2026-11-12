@@ -1,0 +1,66 @@
+id           = "bennypowers/israel-transit"
+name         = "Israel Transit"
+version      = "1.0.0"
+plugin_api   = 15
+author       = "bennypowers"
+license      = "GPL-3.0"
+icon         = "bus"
+description  = "Next bus at an Israeli transit stop, with a detailed arrivals panel"
+tags         = ["transit", "bus", "israel", "utility"]
+
+[[setting]]
+key             = "stopCode"
+type            = "string"
+label_key       = "settings.stop_code.label"
+description_key = "settings.stop_code.description"
+default         = ""
+
+[[setting]]
+key             = "refreshInterval"
+type            = "int"
+label_key       = "settings.refresh_interval.label"
+description_key = "settings.refresh_interval.description"
+default         = 30
+min             = 10
+max             = 300
+step            = 5
+
+[[setting]]
+key             = "monitoringInterval"
+type            = "int"
+label_key       = "settings.monitoring_interval.label"
+description_key = "settings.monitoring_interval.description"
+default         = 30
+min             = 10
+max             = 90
+step            = 5
+
+[[setting]]
+key             = "apiUrl"
+type            = "string"
+label_key       = "settings.api_url.label"
+description_key = "settings.api_url.description"
+default         = ""
+advanced        = true
+
+[[service]]
+id    = "fetcher"
+entry = "service.luau"
+
+[[widget]]
+id    = "next"
+entry = "widget.luau"
+
+[[widget.setting]]
+key             = "stopCode"
+type            = "string"
+label_key       = "settings.stop_code.label"
+description_key = "settings.stop_code_widget.description"
+default         = ""
+
+[[panel]]
+id        = "schedule"
+entry     = "panel.luau"
+width     = 420
+height    = 560
+placement = "attached"

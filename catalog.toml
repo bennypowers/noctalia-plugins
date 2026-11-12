@@ -34,6 +34,17 @@ plugin_api  = 34
 tags        = ["background", "apps", "flatpak", "portal"]
 
 [[plugin]]
+id          = "bennypowers/israel-transit"
+name        = "Israel Transit"
+version     = "1.0.0"
+author      = "bennypowers"
+license     = "GPL-3.0"
+icon        = "bus"
+description = "Next bus at an Israeli transit stop, with a detailed arrivals panel"
+plugin_api  = 15
+tags        = ["transit", "bus", "israel", "utility"]
+
+[[plugin]]
 id          = "bennypowers/ddc-dell"
 name        = "Dell Display (DDC)"
 version     = "1.0.0"

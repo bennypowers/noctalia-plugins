@@ -1,0 +1,44 @@
+{
+  "settings": {
+    "stop_code": {
+      "label": "Stop number",
+      "description": "The public stop code shown on the stop sign, e.g. 5200."
+    },
+    "stop_code_widget": {
+      "description": "Stop for this widget instance. Leave empty to use the plugin-level stop number."
+    },
+    "refresh_interval": {
+      "label": "Refresh interval",
+      "description": "How often arrivals are fetched, in seconds."
+    },
+    "monitoring_interval": {
+      "label": "Monitoring window",
+      "description": "How far ahead to look for arrivals, in minutes."
+    },
+    "api_url": {
+      "label": "API URL",
+      "description": "Base URL of the Israel transit API. Leave empty to use the hosted instance."
+    }
+  },
+  "common": {
+    "now": "now",
+    "eta": "{count}m"
+  },
+  "widget": {
+    "idle": "Israel Transit",
+    "noStop": "transit: set stop",
+    "noBus": "no bus",
+    "error": "transit: error"
+  },
+  "panel": {
+    "loading": "Fetching arrivals…",
+    "noStop": "No stop configured. Open settings and enter the stop number printed on your stop sign.",
+    "errorNetwork": "Could not reach the transit API.",
+    "errorParse": "Could not parse the transit API response.",
+    "noArrivals": "No upcoming arrivals in the monitoring window.",
+    "openSettings": "Open settings",
+    "retry": "Retry",
+    "stop": "Stop {code}",
+    "updated": "Updated {time}"
+  }
+}
