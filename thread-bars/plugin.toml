@@ -41,6 +41,6 @@ entry = "widget.luau"
 [[panel]]
 id        = "details"
 entry     = "panel.luau"
-width     = 560
+width     = 580
 height    = 700
 placement = "attached"

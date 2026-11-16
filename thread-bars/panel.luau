@@ -9,6 +9,8 @@ local history = require("./lib/history.luau")
 
 local GRAPH_HEIGHT = 260
 local LEGEND_COLUMNS = 6
+local LEGEND_CELL_WIDTH = 72
+local LEGEND_COLUMN_GAP = 12
 local ANIMATION_FRAME_MS = 33
 local SCROLL_SUBDIVISIONS = 16
 -- The sampler service retains a few extra samples; the graph draws the newest
@@ -174,9 +176,13 @@ local function layeredGraph(series, overallValues, overallColor)
   }, layers)
 end
 
--- One label per core instead of a swatch box plus a label: the declarative
--- tree is re-read on every scroll frame, and per-node cost dominates, so this
--- keeps the legend legible at a third of the node count.
+-- Noctalia's layout is flexbox only (ui.row/ui.column, no grid), and a
+-- ui.label ignores `width` (it sizes to its text; only containers honor
+-- fixed width in v5.3.0). So each core is one fixed-width cell row: the
+-- "■ Cn" label hugs the left edge and the percentage hugs the right
+-- (justify = "space_between"), pinning both column boundaries while values
+-- change digit count. Rows pack left with a fixed gap, so a short final row
+-- still lines up under the columns above it.
 local function legend(coreHistory, colors)
   local rows = {}
   for first = 1, #coreHistory, LEGEND_COLUMNS do
@@ -184,16 +190,24 @@ local function legend(coreHistory, colors)
     local last = math.min(first + LEGEND_COLUMNS - 1, #coreHistory)
     for index = first, last do
       local usage = latest(coreHistory[index])
-      cells[#cells + 1] = ui.label({
-        key = "legend-" .. index,
-        width = 74,
-        text = string.format("■ C%d %d%%", index - 1, math.floor(usage + 0.5)),
-        fontSize = 10,
-        color = colors[index],
-        maxLines = 1,
+      cells[#cells + 1] = ui.row({ width = LEGEND_CELL_WIDTH, justify = "space_between" }, {
+        ui.label({
+          key = "legend-core-" .. index,
+          text = "■ C" .. (index - 1),
+          fontSize = 10,
+          color = colors[index],
+          maxLines = 1,
+        }),
+        ui.label({
+          key = "legend-" .. index,
+          text = math.floor(usage + 0.5) .. "%",
+          fontSize = 10,
+          color = colors[index],
+          maxLines = 1,
+        }),
       })
     end
-    rows[#rows + 1] = ui.row({ gap = 4, justify = "space_between" }, cells)
+    rows[#rows + 1] = ui.row({ gap = LEGEND_COLUMN_GAP, justify = "start", align = "center" }, cells)
   end
   return rows
 end
@@ -227,7 +241,7 @@ local function buildTree()
       fontSize = 13,
       color = "on_surface_variant",
     }))
-    tree = ui.column({ gap = 12, padding = 16 }, children)
+    tree = ui.column({ gap = 12, padding = 10 }, children)
     return
   end
 
@@ -293,11 +307,9 @@ local function buildTree()
   local legendRows = legend(coreHistory, colors)
 
   table.insert(children, ui.column({
-    fill = "surface_variant/0.5",
-    radius = 12,
-    border = "outline/0.2",
-    borderWidth = 1,
-    padding = 12,
+    fill = "surface_container/0.35",
+    radius = 8,
+    padding = 10,
     gap = 10,
   }, {
     ui.row({ align = "center", justify = "space_between" }, {
@@ -332,7 +344,7 @@ local function buildTree()
     ui.column({ gap = 4 }, legendRows),
   }))
 
-  tree = ui.scroll({ gap = 10, padding = 16 }, children)
+  tree = ui.scroll({ gap = 10, padding = 10 }, children)
 end
 
 local overallValues = {}
