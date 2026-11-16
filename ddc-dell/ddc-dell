@@ -34,15 +34,25 @@ CODES=(10 12 14 60 62 8D DC E8 E9)
 # kvm:  E7 0xFF00 switch the USB/KVM upstream (experimental on the U4025QW)
 declare -A ACTIONS=( [swap]="E5 0xF001" [kvm]="E7 0xFF00" )
 
+# --syslog NEVER suppresses ddcutil's journald output, including the harmless
+# Dell probe spam (4 lines/call at our poll rate) but ALSO real error
+# diagnostics and crash backtraces. Set DDC_DELL_DEBUG=1 for a session where
+# you want those (and stderr) back while chasing a problem.
+# (The space form is mandatory: ddcutil 2.2.6's preparse mangles --syslog=.)
+
 bus() {
   if [[ -s $BUS_CACHE ]]; then
     cat "$BUS_CACHE"
     return
   fi
-  local found
-  found=$(ddcutil detect --terse 2>/dev/null | awk -v m="$MODEL" '
-    /I2C bus:/ { bus = $NF; sub(".*-", "", bus) }
-    /Monitor:/ && index($0, "DEL:") && index(tolower($0), tolower(m)) { print bus; exit }')
+  local found select
+  select=' /I2C bus:/ { bus = $NF; sub(".*-", "", bus) }
+    /Monitor:/ && index($0, "DEL:") && index(tolower($0), tolower(m)) { print bus; exit }'
+  if [[ -n ${DDC_DELL_DEBUG:-} ]]; then
+    found=$(ddcutil detect --terse | awk -v m="$MODEL" "$select")
+  else
+    found=$(ddcutil --syslog NEVER detect --terse 2>/dev/null | awk -v m="$MODEL" "$select")
+  fi
   [[ -n $found ]] || return 1
   echo "$found" | tee "$BUS_CACHE"
 }
@@ -53,7 +63,13 @@ bus() {
 ddc() {
   local b
   b=$(bus) || return 1
-  flock -w 10 -E 75 "$LOCK" ddcutil --bus "$b" --noverify "$@" 2>/dev/null
+  # flock is an external binary and cannot exec shell functions, so the
+  # debug/quiet selection happens here, not in a wrapper.
+  if [[ -n ${DDC_DELL_DEBUG:-} ]]; then
+    flock -w 10 -E 75 "$LOCK" ddcutil --bus "$b" --noverify "$@"
+  else
+    flock -w 10 -E 75 "$LOCK" ddcutil --syslog NEVER --bus "$b" --noverify "$@" 2>/dev/null
+  fi
 }
 
 # The monitor may have re-hotplugged onto another bus: one retry on a freshly
