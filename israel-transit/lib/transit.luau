@@ -67,4 +67,31 @@ function M.normalizeArrivals(routes)
   return rows
 end
 
+-- Arrivals from a previous successful fetch that are still relevant at
+-- `nowMs`. ETAs are relative to the fetch time, so they are aged here; a
+-- departure gets one minute of grace so a bus due "now" does not vanish the
+-- instant the next poll fails.
+function M.liveArrivals(arrivals, updatedAtMs, nowMs)
+  local rows = {}
+  if type(arrivals) ~= "table" or type(updatedAtMs) ~= "number" then
+    return rows
+  end
+  local elapsed = (tonumber(nowMs) or updatedAtMs) - updatedAtMs
+  for _, arrival in ipairs(arrivals) do
+    local eta = tonumber(arrival.eta)
+    if eta ~= nil then
+      local remainingMs = eta * 60000 - elapsed
+      if remainingMs > -60000 then
+        local copy = {}
+        for key, value in pairs(arrival) do
+          copy[key] = value
+        end
+        copy.eta = math.max(0, math.ceil(remainingMs / 60000))
+        rows[#rows + 1] = copy
+      end
+    end
+  end
+  return rows
+end
+
 return M

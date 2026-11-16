@@ -28,13 +28,15 @@
     "idle": "Israel Transit",
     "noStop": "transit: set stop",
     "noBus": "no bus",
-    "error": "transit: error"
+    "error": "transit: error",
+    "stale": "Warning"
   },
   "panel": {
     "loading": "Fetching arrivals…",
     "noStop": "No stop configured. Open settings and enter the stop number printed on your stop sign.",
     "errorNetwork": "Could not reach the transit API.",
     "errorParse": "Could not parse the transit API response.",
+    "stale": "Showing the last known arrivals.",
     "noArrivals": "No upcoming arrivals in the monitoring window.",
     "openSettings": "Open settings",
     "retry": "Retry",

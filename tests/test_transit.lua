@@ -162,5 +162,35 @@ test("returns empty list for non-table input", function()
   eq(#transit.normalizeArrivals("x"), 0, "string")
 end)
 
+test("live arrivals drop past departures and age remaining etas", function()
+  local updated = 1000000
+  local rows = transit.liveArrivals({
+    { route = "1", eta = 5 },
+    { route = "2", eta = 1 },
+  }, updated, updated + 120000)
+  eq(#rows, 1, "only the future departure survives")
+  eq(rows[1].route, "1", "kept route")
+  eq(rows[1].eta, 3, "remaining eta")
+end)
+
+test("live arrivals keep a departure in its grace minute", function()
+  local updated = 1000000
+  local rows = transit.liveArrivals({ { route = "1", eta = 0 } }, updated, updated + 30000)
+  eq(#rows, 1, "grace keeps it")
+  eq(rows[1].eta, 0, "shows now")
+  eq(#transit.liveArrivals({ { route = "1", eta = 0 } }, updated, updated + 120000), 0, "grace expires")
+end)
+
+test("live arrivals do not mutate the source", function()
+  local source = { { route = "1", eta = 5 } }
+  transit.liveArrivals(source, 0, 60000)
+  eq(source[1].eta, 5, "source eta")
+end)
+
+test("live arrivals handle missing inputs", function()
+  eq(#transit.liveArrivals(nil, 0, 0), 0, "nil arrivals")
+  eq(#transit.liveArrivals({ { route = "1", eta = 5 } }, nil, 0), 0, "nil timestamp")
+end)
+
 io.stdout:write(string.format("%d passed, %d failed\n", passed, failed))
 os.exit(failed == 0 and 0 or 1)

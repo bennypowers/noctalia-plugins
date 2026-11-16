@@ -16,6 +16,10 @@ local monitoringMinutes = noctalia.getConfig("monitoringInterval") or 30
 local widgetStop = noctalia.state.get("transit-stop") or ""
 
 local fetching = false
+local lastLoggedError = ""
+-- Last successful fetch, kept so a transient failure can still show arrivals
+-- that have not departed yet.
+local lastGood = nil
 
 -- The widget-level stop wins when set; otherwise the plugin-level one.
 local function effectiveStop()
@@ -40,7 +44,21 @@ local function publish(value)
 end
 
 local function fail(reason, detail)
-  publish({ ok = false, error = reason, detail = detail or "" })
+  detail = detail or ""
+  -- Log once per distinct failure; a 30 s poll would otherwise repeat the
+  -- same line until the API recovers.
+  local message = reason .. (detail ~= "" and (" (" .. detail .. ")") or "")
+  if message ~= lastLoggedError then
+    lastLoggedError = message
+    noctalia.log("israel-transit: fetch failed: " .. message)
+  end
+  local value = { ok = false, error = reason, detail = detail }
+  if lastGood and lastGood.code == effectiveStop() then
+    value.stop = lastGood.stop
+    value.arrivals = lastGood.arrivals
+    value.updatedAtMs = lastGood.updatedAtMs
+  end
+  publish(value)
 end
 
 local function fetch()
@@ -63,11 +81,20 @@ local function fetch()
       fail("parse", err or "")
       return
     end
+    local stop = transit.normalizeStop(decoded.stop_info)
+    local arrivals = transit.normalizeArrivals(decoded.incoming_routes)
+    lastLoggedError = ""
+    lastGood = {
+      code = effectiveStop(),
+      stop = stop,
+      arrivals = arrivals,
+      updatedAtMs = noctalia.nowMs(),
+    }
     publish({
       ok = true,
-      stop = transit.normalizeStop(decoded.stop_info),
-      arrivals = transit.normalizeArrivals(decoded.incoming_routes),
-      updatedAtMs = noctalia.nowMs(),
+      stop = stop,
+      arrivals = arrivals,
+      updatedAtMs = lastGood.updatedAtMs,
     })
   end)
   if not started then

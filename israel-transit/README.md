@@ -12,6 +12,7 @@ A bar widget that shows the next bus arriving at an Israeli transit stop. Click 
 - **Configurable refresh rate** — polls real-time arrivals every 10–300 seconds
 - **Configurable monitoring window** — look 10–90 minutes ahead
 - **Self-hostable API** — point it at your own instance of the [Israel public transport API](https://github.com/benyaming/israel-public-transport-api); defaults to the hosted instance
+- **Stale-data fallback** — if a refresh fails, arrivals from the last successful fetch stay visible while they have not departed yet: the bar switches to a warning glyph and the panel shows an error banner with the last known schedule. Both clear on the next successful fetch
 - **English + Hebrew UI** (stop and route names come from the API in Hebrew)
 
 ## Data source
