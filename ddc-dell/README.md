@@ -13,12 +13,12 @@ codes human-readable and pleasant to use.
   - Mute toggle
   - Selects: colour preset, display mode, input source (switching away from the
     current input asks for a confirm first — it blanks the screen)
-  - **PIP/PBP section** with an on/off switch in the header (on defaults to
-    PBP 50/50), laid out as two side-by-side cards like the volume panel's
-    output/input cards: *Picture-By-Picture* ratio chips and
-    *Picture-In-Picture* position chips (glyph + tooltip where the Tabler set
-    has a real PIP icon), plus sub-window input, **Video Swap**, and an
-    experimental **KVM USB Switch**
+  - **PIP/PBP section** with stacked full-width cards: a *Picture-By-Picture*
+    chip row (Off plus the five ratios — Off is a chip, not a header switch)
+    and *Picture-In-Picture* position chips (glyph + tooltip where the Tabler
+    set has a real PIP icon), plus sub-window input, **Video Swap**, and an
+    experimental **KVM USB switch** with a helper label showing which output
+    (USB-C / Thunderbolt) the keyboard/mouse are routed to
 
 ## DDC/CI code map (U4025QW)
 
@@ -34,7 +34,7 @@ codes human-readable and pleasant to use.
 | `0xE9` | **PIP/PBP layout** (Dell) | `0x00` Off, `0x24` PBP 50/50, `0x27` PBP 20/80, `0x28` PBP 80/20, `0x29` PBP 25/75, `0x2A` PBP 75/25, `0x21` PIP TR small, `0x22`/`0x01`/`0x02` PIP BR/BL/TL small (assumed) |
 | `0xE8` | **PBP sub-window input** (Dell) | same input codes as `0x60` |
 | `0xE5` | **PIP/PBP flag + actions** (Dell) | `sl` 0x00/0xFF = PBP off/on (firmware-managed); `0xF001` video swap (main ↔ sub) |
-| `0xE7` | **USB/KVM upstream** (Dell) | `0xFF00` momentary KVM switch — *experimental* |
+| `0xE7` | **USB/KVM upstream** (Dell) | `0xFF00` momentary KVM switch (binary) — *experimental*; the register reports no usable state (value byte stays `0x00`), so the switch position is tracked by the plugin |
 
 The firmware advertises ten `0xE9` values. `0x24` (PBP 50/50) and `0x27`
 (PBP 20/80) are confirmed by a before/after VCP scan on another U4025QW
@@ -76,14 +76,18 @@ tracks what the firmware actually applied.
 |---|---|---|
 | `monitor` | `U4025QW` | Case-insensitive substring of the DDC model name; empty selects the first Dell monitor |
 | `updateInterval` | `5000` | State polling interval in ms (2000–60000) |
-| `kvmSwitch` | `true` | Show the experimental KVM USB switch button in PBP mode |
+| `kvmSwitch` | `true` | Show the experimental KVM USB switch in PBP mode |
 
 ## Caveats
 
 - **KVM USB Switch is experimental**: `0xE7 0xFF00` is a strong cross-model
   inference (U2723QE gist), not verified on the U4025QW. It is only shown
   while PIP/PBP is on, where the OSD's "USB Switch" also lives — but test it
-  with a second machine present before relying on it.
+  with a second machine present before relying on it. The monitor does not
+  report the switch position, so the plugin tracks it per session: the label
+  reads *Unknown* until the switch is flipped once (and again after a
+  Noctalia restart or a manual switch on the monitor's OSD). Switch ON means
+  the USB upstream is routed to Thunderbolt; OFF means USB-C.
 - PBP disables HDR and VRR/DRR on this monitor, and entering/leaving PBP drops
   DDC for a few seconds; the next poll recovers.
 - All split ratios and the top-right PIP are user-confirmed. The other three

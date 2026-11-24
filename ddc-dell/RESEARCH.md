@@ -102,7 +102,21 @@ TB4 upstream is `0x19` instead of `0x1B`.
 
 ### 0xE7 — KVM / USB upstream — **untested (risky), strong cross-references**
 - Advertised values: `02 03` (enum). Live read returns odd data
-  (`mh=0xbc ml=0x00 sh=0xac sl=0x00`) — may be an action-style or bitfield register.
+  (`mh=0xbc ml=0x00 sh=0xac sl=0x00` on 2026-11-05) — an action-style or
+  bitfield register, not a plain value register.
+- **Re-read 2026-11-23:** `mh=0xbc ml=0x00 sh=0xb8 sl=0x00`, stable across
+  repeated reads. The value byte `sl` stays `0x00` — never the advertised
+  `02/03` — so there is **no usable state readback** the way E5/E8 have. But
+  the `sh` byte moved `0xAC → 0xB8` between sessions: its bits 5:4 decode to
+  exactly `02 → 03` (the advertised values), while bits 3:2 also moved
+  (`11 → 00`), so a single KVM flip can't fully explain the diff — probably a
+  multi-field register (KVM position + e.g. an Ethernet/USB-assignment flag).
+  The state is plausibly readable as bits 5:4 of `sh`, but that needs one
+  supervised flip (read, flip, read) to confirm, plus the user identifying
+  which output (USB-C vs Thunderbolt) each position routes to. The plugin now
+  polls `E7` (harmless) but tracks the switch position optimistically in the
+  `ddc` state's `kvm` key (0/1, nil until first flipped; carried through
+  service polls), with an assumed USB-C/Thunderbolt label mapping.
 - NOT written during probing: it can steal the user's keyboard/mouse.
 - Cross-references:
   - U2723QE gist: `E7 0xFF00` = momentary "switch USB hub target in pip/pbp mode"
@@ -190,6 +204,15 @@ Thunderbolt)
    Needs a supervised test with the user (keyboard/mouse follow the switch).
    (RESOLVED: the earlier `E9` mass-refusal was transient — all accepted values
    work from Off and from an active layout; `22/01/02` remain genuinely refused.)
+   (2026-11-23: user-confirmed the KVM control is binary — it toggles between
+   two outputs (USB-C / Thunderbolt). The panel now offers it as a switch with
+   plugin-tracked position; remaining: supervised read/flip/read to confirm the
+   `sh` bits 5:4 = `02/03` hypothesis and the value→output mapping.)
+   (2026-11-24: switch semantics fixed with the user — the monitor's OSD
+   shows "Upstream:" <output>, so the state is checkable by eye any time.
+   The switch reads ON when USB is routed to Thunderbolt and OFF when it is
+   on USB-C; the tracked `kvm` key holds the index of the active output in
+   `kvmOutputs` = { USB-C, Thunderbolt }.)
 3. `E2` / `E4` / `EA` / `EF` / `F0` meanings.
 4. Whether "Audio (main/sub)" (PBP audio source) has a DDC code (maybe `EA` or `F0`).
 5. Whether the OSD USB-menu KVM *assignments* ("DP assign to USB-C", Ethernet

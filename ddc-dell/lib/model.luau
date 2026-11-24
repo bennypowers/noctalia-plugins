@@ -31,6 +31,16 @@ M.modes = {
   { value = 0x05, label = "Game" },
 }
 
+-- 0xE7 KVM/USB upstream. The control is binary: the momentary action write
+-- `E7 0xFF00` toggles the keyboard/mouse between the monitor's two upstream
+-- outputs. The register reports no usable state (the value byte stays 0x00,
+-- never the advertised 02/03), so the plugin tracks the position in the
+-- `ddc` state's `kvm` key instead: 0 or 1, nil until first flipped.
+-- Switch semantics (user-specified 2026-11-24): ON = USB routed to
+-- Thunderbolt, OFF = USB-C. The key holds the index of the active output
+-- in this table, so the switch reads `kvm == 1` (Thunderbolt) as on.
+M.kvmOutputs = { "USB-C", "Thunderbolt" }
+
 -- 0xE9 PIP/PBP layout. The firmware advertises ten values; on this model
 -- 00/21/24/27/28/29/2A accept writes. 50/50 (0x24) and 20/80 (0x27) are
 -- confirmed by a before/after VCP scan on another U4025QW (rabfulton/
@@ -48,13 +58,15 @@ M.modes = {
 -- Glyphs are Tabler icons (Noctalia's bundled set): the two right corners and
 -- the bottom-left have real picture-in-picture icons; the top-left corner only
 -- has a corner-arrow icon in the set.
--- PBP split ratios (the OSD's five PBP modes).
+-- PBP split ratios (the OSD's five PBP modes). The quarter ratios have no
+-- fitting icon in the bundled set, so they carry fraction characters;
+-- the tooltips carry the full ratios.
 M.pbpRatios = {
-  { value = 0x24, tooltip = "50/50", glyph = "columns-2" },
   { value = 0x27, tooltip = "20/80", glyph = "layout-sidebar" },
+  { value = 0x29, label = "¼", tooltip = "25/75" },
+  { value = 0x24, tooltip = "50/50", glyph = "columns-2" },
+  { value = 0x2A, label = "¾", tooltip = "75/25" },
   { value = 0x28, tooltip = "80/20", glyph = "layout-sidebar-right" },
-  { value = 0x29, label = "25/75" },
-  { value = 0x2A, label = "75/25" },
 }
 
 -- PIP positions (small inset window). Labels are corner-only so they fit
@@ -66,9 +78,8 @@ M.pipPositions = {
   { value = 0x02, label = "Top Left", tooltip = "Top Left (small)" },
 }
 
--- What the section header's switch turns off / back on.
+-- The PBP layout that means "PIP/PBP off".
 M.PBP_OFF = 0x00
-M.PBP_DEFAULT = 0x24
 
 -- Off plus both groups: the full lookup for labelFor/indexFor.
 M.pbpLayouts = { { value = M.PBP_OFF, label = "Off" } }
@@ -77,6 +88,13 @@ for _, option in ipairs(M.pbpRatios) do
 end
 for _, option in ipairs(M.pipPositions) do
   M.pbpLayouts[#M.pbpLayouts + 1] = option
+end
+
+-- The panel's PBP chip row: Off plus the five ratios, one row (the section
+-- header no longer carries an on/off toggle, so Off is a chip).
+M.pbpOptions = { M.pbpLayouts[1] }
+for _, option in ipairs(M.pbpRatios) do
+  M.pbpOptions[#M.pbpOptions + 1] = option
 end
 
 -- VCP code -> state key, in the order the backend's `state` may report them.

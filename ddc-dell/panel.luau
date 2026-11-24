@@ -55,7 +55,11 @@ end
 local function refresh()
   run({ "state" }, function(result)
     if result.exitCode == 0 then
-      state = model.buildState(model.parseGetvcp(result.stdout))
+      local fresh = model.buildState(model.parseGetvcp(result.stdout))
+      -- buildState has no kvm key (the register reports no state); keep the
+      -- plugin-tracked position across re-reads.
+      fresh.kvm = state and state.kvm
+      state = fresh
       busy = false
       render()
     else
@@ -138,7 +142,7 @@ local function sliderRow(key, code, label, value)
   return row
 end
 
-local function selectRow(key, label, options, value, onSelect)
+local function selectRow(key, label, options, value, onSelect, enabled)
   local index = model.indexFor(options, value)
   return ui.row({ justify = "space_between", align = "center", gap = 8 }, {
     ui.label({ text = label, fontSize = 13, width = 104 }),
@@ -147,7 +151,7 @@ local function selectRow(key, label, options, value, onSelect)
       options = labelsOf(options),
       selectedIndex = index or 0,
       flexGrow = 1,
-      enabled = not busy,
+      enabled = not busy and enabled ~= false,
       onChange = function(indexStr)
         local option = options[tonumber(indexStr) + 1]
         if option then
@@ -189,12 +193,15 @@ end
 
 -- The layouts are chip grids rather than selects: the OSD offers a whole
 -- family of PIP/PBP modes and the user should see them all at once.
-local function chipGrid(options, current, onPick)
-  local COLUMNS = 2
+-- `columns` defaults to 2; pass #options for a single row (the PBP ratio
+-- chips; needs a full-width card — the half-width card squeezed the glyph
+-- chips into ellipsis).
+local function chipGrid(options, current, onPick, columns)
+  local cols = columns or 2
   local rows = {}
-  for first = 1, #options, COLUMNS do
+  for first = 1, #options, cols do
     local cells = {}
-    local last = math.min(first + COLUMNS - 1, #options)
+    local last = math.min(first + cols - 1, #options)
     for index = first, last do
       local option = options[index]
       local props = {
@@ -225,7 +232,7 @@ end
 -- A layout card styled after the control center's device volume cards
 -- (surface_container fill, 12px radius, 12px padding, 8px gap):
 -- title row plus the group's chip grid.
-local function layoutCard(title, options, current, onPick)
+local function layoutCard(title, options, current, onPick, columns)
   return ui.column({
     fill = "surface_container",
     radius = 12,
@@ -234,7 +241,7 @@ local function layoutCard(title, options, current, onPick)
     flexGrow = 1,
   }, {
     ui.label({ text = title, fontSize = 14, fontWeight = "bold" }),
-    chipGrid(options, current, onPick),
+    chipGrid(options, current, onPick, columns),
   })
 end
 
@@ -251,89 +258,89 @@ local function pickLayout(s, value)
 end
 
 local function pipPbpSection(s)
-  local active = s.pbp > 0
   local children = {}
 
-  children[#children + 1] = ui.row({ align = "center", justify = "space_between" }, {
-    ui.label({
-      text = noctalia.tr("panel.pip_pbp"),
-      fontSize = 14,
-      fontWeight = "bold",
-      flexGrow = 1,
-    }),
-    ui.toggle({
-      key = "toggle-pip",
-      checked = active,
-      enabled = not busy,
-      tooltip = noctalia.tr("panel.pip_switch_tooltip"),
-      onChange = function(value)
-        local on = value == "true"
-        if on == active then
-          return
-        end
-        pickLayout(s, on and model.PBP_DEFAULT or model.PBP_OFF)
+  -- No on/off toggle in the header: Off is a chip in the PBP row, so the
+  -- whole section is driven by the chips and the sub-controls below.
+  children[#children + 1] = ui.label({
+    text = noctalia.tr("panel.pip_pbp"),
+    fontSize = 14,
+    fontWeight = "bold",
+  })
+
+  -- Stacked full-width cards: six PBP chips across (Off + five ratios) need
+  -- the full row to keep their glyphs at a legible size (a half-width card
+  -- ellipsizes them).
+  children[#children + 1] = layoutCard(noctalia.tr("panel.pbp_title"), model.pbpOptions, s.pbp, function(value)
+    pickLayout(s, value)
+  end, #model.pbpOptions)
+  children[#children + 1] = layoutCard(noctalia.tr("panel.pip_title"), model.pipPositions, s.pbp, function(value)
+    pickLayout(s, value)
+  end)
+
+  -- The sub-controls are always shown but disabled while PIP/PBP is off
+  -- (they only apply to an active layout); the note below explains which
+  -- state the section is in.
+  local pbpEnabled = s.pbp > 0 and not busy
+
+  children[#children + 1] = selectRow("pbp-input", noctalia.tr("panel.sub_input"), model.inputs, s.pbpInput, function(value)
+    if value == s.pbpInput then
+      return
+    end
+    s.pbpInput = value
+    render()
+    write("E8", value, noctalia.tr("panel.write_failed"))
+  end, s.pbp > 0)
+
+  children[#children + 1] = ui.row({ gap = 8, justify = "center" }, {
+    ui.button({
+      glyph = "arrows-exchange",
+      text = noctalia.tr("panel.video_swap"),
+      variant = "secondary",
+      controlSize = "sm",
+      enabled = pbpEnabled,
+      onClick = function()
+        doAction("swap", noctalia.tr("panel.video_swap"))
       end,
     }),
   })
 
-  -- Two side-by-side cards, like the volume panel's output/input cards.
-  children[#children + 1] = ui.row({ align = "stretch", gap = 12 }, {
-    layoutCard(noctalia.tr("panel.pbp_title"), model.pbpRatios, s.pbp, function(value)
-      pickLayout(s, value)
-    end),
-    layoutCard(noctalia.tr("panel.pip_title"), model.pipPositions, s.pbp, function(value)
-      pickLayout(s, value)
-    end),
-  })
-
-  if s.pbp > 0 then
-    children[#children + 1] = selectRow("pbp-input", noctalia.tr("panel.sub_input"), model.inputs, s.pbpInput, function(value)
-      if value == s.pbpInput then
-        return
-      end
-      s.pbpInput = value
-      render()
-      write("E8", value, noctalia.tr("panel.write_failed"))
-    end)
-
-    local buttons = {
-      ui.button({
-        glyph = "arrows-exchange",
-        text = noctalia.tr("panel.video_swap"),
-        variant = "secondary",
-        controlSize = "sm",
-        enabled = not busy,
-        onClick = function()
-          doAction("swap", noctalia.tr("panel.video_swap"))
-        end,
+  if kvmEnabled then
+    -- The E7 register reports no state, so the helper text shows the
+    -- output the plugin last set (Unknown before the first flip); the
+    -- service carries the tracked position through its polls.
+    local output = s.kvm == nil and noctalia.tr("panel.kvm_unknown") or model.kvmOutputs[s.kvm + 1]
+    children[#children + 1] = ui.row({ justify = "space_between", align = "center", gap = 8 }, {
+      ui.label({
+        text = noctalia.tr("panel.kvm_switch") .. ": " .. output,
+        fontSize = 13,
+        flexGrow = 1,
       }),
-    }
-    if kvmEnabled then
-      buttons[#buttons + 1] = ui.button({
-        glyph = "usb",
-        text = noctalia.tr("panel.kvm_switch"),
-        variant = "secondary",
-        controlSize = "sm",
+      ui.toggle({
+        key = "toggle-kvm",
+        checked = s.kvm == 1,
+        enabled = pbpEnabled,
         tooltip = noctalia.tr("panel.kvm_tooltip"),
-        enabled = not busy,
-        onClick = function()
+        onChange = function(value)
+          local on = value == "true"
+          if (s.kvm == 1) == on then
+            return
+          end
+          s.kvm = on and 1 or 0
+          render()
+          -- Publish the tracked position so the service's next poll carries
+          -- it forward (it is not part of the monitor read).
+          noctalia.state.set("ddc", s)
           doAction("kvm", noctalia.tr("panel.kvm_switch"))
         end,
-      })
-    end
-    children[#children + 1] = ui.row({ gap = 8, justify = "center" }, buttons)
-    children[#children + 1] = ui.label({
-      text = noctalia.tr("panel.pbp_note"),
-      fontSize = 11,
-      color = "on_surface_variant",
-    })
-  else
-    children[#children + 1] = ui.label({
-      text = noctalia.tr("panel.pbp_off_note"),
-      fontSize = 11,
-      color = "on_surface_variant",
+      }),
     })
   end
+  children[#children + 1] = ui.label({
+    text = s.pbp > 0 and noctalia.tr("panel.pbp_note") or noctalia.tr("panel.pbp_off_note"),
+    fontSize = 11,
+    color = "on_surface_variant",
+  })
 
   return children
 end

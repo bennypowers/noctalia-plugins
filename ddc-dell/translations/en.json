@@ -9,8 +9,8 @@
       "description": "How often to poll the monitor's DDC state, in milliseconds"
     },
     "kvm_switch": {
-      "label": "KVM USB Switch Button",
-      "description": "Show the experimental KVM USB switch button in PIP/PBP mode"
+      "label": "KVM USB Switch",
+      "description": "Show the experimental KVM USB switch in PIP/PBP mode"
     }
   },
   "panel": {
@@ -31,13 +31,13 @@
     "cancel": "Cancel",
     "pip_pbp": "PIP / PBP",
     "pip_pbp_on": "PIP/PBP on",
-    "pip_switch_tooltip": "Turn PIP/PBP off, or back on (PBP 50/50)",
     "pbp_title": "Picture-By-Picture",
     "pip_title": "Picture-In-Picture",
     "sub_input": "Sub-window input",
     "video_swap": "Video Swap",
     "kvm_switch": "KVM USB Switch",
-    "kvm_tooltip": "Experimental — switches the USB/KVM upstream between the video inputs. Only works while PIP/PBP is on.",
+    "kvm_unknown": "Unknown",
+    "kvm_tooltip": "Experimental — switches the keyboard/mouse upstream between the monitor's video outputs. Only works while PIP/PBP is on. The monitor does not report the position, so the switch tracks the last position set here.",
     "pbp_note": "PBP disables HDR and VRR on this monitor.",
     "pbp_off_note": "PIP/PBP needs a second video source on another input.",
     "write_failed": "Display control failed",

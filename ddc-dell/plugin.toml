@@ -44,5 +44,5 @@ entry = "widget.luau"
 id        = "control"
 entry     = "panel.luau"
 width     = 420
-height    = 800
+height    = 920
 placement = "attached"

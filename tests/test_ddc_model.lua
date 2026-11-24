@@ -96,6 +96,13 @@ test("buildState maps codes to keys and fills -1 for absent features", function(
   eq(state.pbp, 0x24, "pbp")
   eq(state.contrast, -1, "absent contrast")
   eq(state.pbpInput, -1, "absent pbp input")
+  eq(state.kvm, nil, "kvm is plugin-tracked, never read from the monitor")
+end)
+
+test("kvm outputs map the two tracked switch positions", function()
+  eq(model.kvmOutputs[1], "USB-C", "off position")
+  eq(model.kvmOutputs[2], "Thunderbolt", "on position")
+  eq(#model.kvmOutputs, 2, "binary control")
 end)
 
 test("labelFor resolves known values and falls back to hex", function()
@@ -111,9 +118,9 @@ test("indexFor is 0-based and nil for absent values", function()
   eq(model.indexFor(model.inputs, 0x11), 1, "hdmi")
   eq(model.indexFor(model.inputs, 0x19), 2, "tb")
   eq(model.indexFor(model.pbpLayouts, 0x00), 0, "off")
-  eq(model.indexFor(model.pbpLayouts, 0x24), 1, "pbp 50/50")
-  eq(model.indexFor(model.pbpLayouts, 0x27), 2, "pbp 20/80")
-  eq(model.indexFor(model.pbpLayouts, 0x2A), 5, "last ratio")
+  eq(model.indexFor(model.pbpLayouts, 0x24), 3, "pbp 50/50")
+  eq(model.indexFor(model.pbpLayouts, 0x27), 1, "pbp 20/80")
+  eq(model.indexFor(model.pbpLayouts, 0x2A), 4, "pbp 75/25")
   eq(model.indexFor(model.pbpLayouts, 0x21), 6, "pip variant")
 end)
 
@@ -121,8 +128,8 @@ test("pbp layout labels match the user-confirmed ratios", function()
   eq(model.labelFor(model.pbpLayouts, 0x24), "50/50", "50/50")
   eq(model.labelFor(model.pbpLayouts, 0x27), "20/80", "20/80")
   eq(model.labelFor(model.pbpLayouts, 0x28), "80/20", "80/20")
-  eq(model.labelFor(model.pbpLayouts, 0x29), "25/75", "25/75")
-  eq(model.labelFor(model.pbpLayouts, 0x2A), "75/25", "75/25")
+  eq(model.labelFor(model.pbpLayouts, 0x29), "¼", "25/75 chip label")
+  eq(model.labelFor(model.pbpLayouts, 0x2A), "¾", "75/25 chip label")
 end)
 
 test("pip layout labels and glyphs", function()
@@ -150,7 +157,6 @@ test("pbp/pip split tables feed the two panel sections", function()
   eq(model.pbpLayouts[1].value, 0x00, "off leads the merged table")
   eq(model.labelFor(model.pbpLayouts, 0x00), "Off", "off label")
   eq(model.PBP_OFF, 0x00, "off constant")
-  eq(model.PBP_DEFAULT, 0x24, "switch default is 50/50")
   -- The merged table is Off plus both groups, in order.
   local i = 2
   for _, option in ipairs(model.pbpRatios) do
@@ -160,6 +166,15 @@ test("pbp/pip split tables feed the two panel sections", function()
   for _, option in ipairs(model.pipPositions) do
     assert(model.pbpLayouts[i] == option, "merged pip entry " .. i)
     i = i + 1
+  end
+end)
+
+test("pbp options are Off plus the five ratios, for the panel's chip row", function()
+  eq(#model.pbpOptions, 6, "off plus five ratios")
+  eq(model.pbpOptions[1].value, 0x00, "off leads")
+  eq(model.pbpOptions[1].label, "Off", "off label")
+  for i = 2, #model.pbpOptions do
+    assert(model.pbpOptions[i] == model.pbpRatios[i - 1], "pbp option " .. i)
   end
 end)
 

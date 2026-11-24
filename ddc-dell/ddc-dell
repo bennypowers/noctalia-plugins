@@ -25,9 +25,10 @@ LOCK="${XDG_RUNTIME_DIR:-/tmp}/ddc-dell.lock"
 BUS_CACHE="${XDG_RUNTIME_DIR:-/tmp}/ddc-dell.${MODEL//[^A-Za-z0-9]/_}.bus"
 
 # 10 brightness, 12 contrast, 14 colour preset, 60 input (main window),
-# 62 volume, 8D mute, DC display mode, E8 PBP sub-window input (Dell),
+# 62 volume, 8D mute, DC display mode, E7 KVM/USB upstream (Dell; read-only
+# here, the register reports no usable state), E8 PBP sub-window input (Dell),
 # E9 PIP/PBP layout (Dell).
-CODES=(10 12 14 60 62 8D DC E8 E9)
+CODES=(10 12 14 60 62 8D DC E7 E8 E9)
 
 # Momentary 16-bit Dell action writes, effective only while PIP/PBP is on.
 # swap: E5 0xF001 video swap (main <-> sub window)

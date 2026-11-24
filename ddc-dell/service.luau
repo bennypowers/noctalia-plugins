@@ -45,7 +45,14 @@ local function poll()
       publish({ ok = false, reason = "monitor" })
       return
     end
-    publish(model.buildState(model.parseGetvcp(result.stdout)))
+    local fresh = model.buildState(model.parseGetvcp(result.stdout))
+    -- The KVM switch position has no readable DDC value (see lib/model.luau):
+    -- carry the plugin-tracked position through the poll.
+    local previous = noctalia.state.get("ddc")
+    if previous and previous.kvm ~= nil then
+      fresh.kvm = previous.kvm
+    end
+    publish(fresh)
   end)
   if not accepted then
     polling = false
