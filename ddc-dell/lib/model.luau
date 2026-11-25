@@ -58,28 +58,34 @@ M.kvmOutputs = { "USB-C", "Thunderbolt" }
 -- Glyphs are Tabler icons (Noctalia's bundled set): the two right corners and
 -- the bottom-left have real picture-in-picture icons; the top-left corner only
 -- has a corner-arrow icon in the set.
--- PBP split ratios (the OSD's five PBP modes). The quarter ratios have no
--- fitting icon in the bundled set, so they carry fraction characters;
--- the tooltips carry the full ratios.
+-- PBP split ratios (the OSD's five PBP modes). Every option carries a
+-- label (the panel's chips render it next to the glyph); the quarter ratios
+-- have no fitting icon in the bundled set, so the ratios read as fraction
+-- characters.
 M.pbpRatios = {
-  { value = 0x27, tooltip = "20/80", glyph = "layout-sidebar" },
-  { value = 0x29, label = "¼", tooltip = "25/75" },
-  { value = 0x24, tooltip = "50/50", glyph = "columns-2" },
-  { value = 0x2A, label = "¾", tooltip = "75/25" },
-  { value = 0x28, tooltip = "80/20", glyph = "layout-sidebar-right" },
+  { value = 0x27, label = "⅕",  glyph = "layout-sidebar" },
+  { value = 0x29, label = "¼", },
+  { value = 0x24, label = "½",  glyph = "columns-2" },
+  { value = 0x2A, label = "¾", },
+  { value = 0x28, label = "⅘",  glyph = "layout-sidebar-right" },
 }
 
 -- PIP positions (small inset window). Labels are corner-only so they fit
--- the narrow card chips; the tooltips carry the full "(small)" text.
+-- the chips; the tooltips carry the full "(small)" text.
 M.pipPositions = {
-  { value = 0x21, tooltip = "Top Right (small)", glyph = "picture-in-picture-top" },
-  { value = 0x22, tooltip = "Bottom Right (small)", glyph = "picture-in-picture" },
+  { value = 0x21, label = "Top Right", tooltip = "Top Right (small)", glyph = "picture-in-picture-top" },
+  { value = 0x22, label = "Bottom Right", tooltip = "Bottom Right (small)", glyph = "picture-in-picture" },
   { value = 0x01, label = "Bottom Left", tooltip = "Bottom Left (small)" },
   { value = 0x02, label = "Top Left", tooltip = "Top Left (small)" },
 }
 
 -- The PBP layout that means "PIP/PBP off".
 M.PBP_OFF = 0x00
+
+-- The video swap (the `swap` backend action) exchanges the main (0x60) and
+-- sub (0xE8) inputs; no VCP reports the resulting orientation, so the panel
+-- tracks the position in the shared `ddc` state's `swapped` key (bool) and
+-- the service carries it through polls, exactly like the KVM position.
 
 -- Off plus both groups: the full lookup for labelFor/indexFor.
 M.pbpLayouts = { { value = M.PBP_OFF, label = "Off" } }

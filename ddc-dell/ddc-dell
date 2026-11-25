@@ -5,6 +5,7 @@
 #                                           monitor's features
 #   ddc-dell [--model NAME] set CODE VALUE  write one VCP feature (whitelist)
 #   ddc-dell [--model NAME] action NAME     momentary Dell action (swap|kvm)
+#   ddc-dell [--model NAME] model           the monitor's full DDC model name
 #
 # --model picks the monitor by a (case-insensitive) substring of its DDC model
 # name; without it the first Dell monitor found is used.
@@ -23,6 +24,7 @@ fi
 
 LOCK="${XDG_RUNTIME_DIR:-/tmp}/ddc-dell.lock"
 BUS_CACHE="${XDG_RUNTIME_DIR:-/tmp}/ddc-dell.${MODEL//[^A-Za-z0-9]/_}.bus"
+NAME_CACHE="${XDG_RUNTIME_DIR:-/tmp}/ddc-dell.${MODEL//[^A-Za-z0-9]/_}.name"
 
 # 10 brightness, 12 contrast, 14 colour preset, 60 input (main window),
 # 62 volume, 8D mute, DC display mode, E7 KVM/USB upstream (Dell; read-only
@@ -41,21 +43,39 @@ declare -A ACTIONS=( [swap]="E5 0xF001" [kvm]="E7 0xFF00" )
 # you want those (and stderr) back while chasing a problem.
 # (The space form is mandatory: ddcutil 2.2.6's preparse mangles --syslog=.)
 
+# Detects the monitor and fills BUS_CACHE plus NAME_CACHE from one detect
+# run. Prints nothing: callers read the caches.
+detect() {
+  local out bus name
+  if [[ -n ${DDC_DELL_DEBUG:-} ]]; then
+    out=$(ddcutil detect --terse)
+  else
+    out=$(ddcutil --syslog NEVER detect --terse 2>/dev/null)
+  fi
+  bus=$(awk -v m="$MODEL" '
+    /I2C bus:/ { bus = $NF; sub(".*-", "", bus) }
+    /Monitor:/ && index($0, "DEL:") && index(tolower($0), tolower(m)) { print bus; exit }' <<<"$out")
+  # The terse Monitor line reads "Monitor: DEL:<model>:<serial>".
+  name=$(awk -v m="$MODEL" '
+    /Monitor:/ && index($0, "DEL:") && index(tolower($0), tolower(m)) {
+      line = $0
+      sub(/^[[:space:]]+/, "", line)
+      sub(/^Monitor:[[:space:]]*/, "", line)
+      sub(/^DEL:/, "", line)
+      sub(/:[^:]*$/, "", line)
+      print line
+      exit }' <<<"$out")
+  [[ -n $bus ]] || return 1
+  echo "$bus" > "$BUS_CACHE"
+  [[ -n $name ]] && echo "$name" > "$NAME_CACHE"
+}
+
 bus() {
   if [[ -s $BUS_CACHE ]]; then
     cat "$BUS_CACHE"
     return
   fi
-  local found select
-  select=' /I2C bus:/ { bus = $NF; sub(".*-", "", bus) }
-    /Monitor:/ && index($0, "DEL:") && index(tolower($0), tolower(m)) { print bus; exit }'
-  if [[ -n ${DDC_DELL_DEBUG:-} ]]; then
-    found=$(ddcutil detect --terse | awk -v m="$MODEL" "$select")
-  else
-    found=$(ddcutil --syslog NEVER detect --terse 2>/dev/null | awk -v m="$MODEL" "$select")
-  fi
-  [[ -n $found ]] || return 1
-  echo "$found" | tee "$BUS_CACHE"
+  detect && cat "$BUS_CACHE"
 }
 
 # Exits 75 if the lock can't be had within 10 s. --noverify is required: the
@@ -81,12 +101,12 @@ with_retry() {
   ddc "$@"
   rc=$?
   if ((rc != 0 && rc != 75)) && [[ $cached ]]; then
-    rm -f "$BUS_CACHE"
+    rm -f "$BUS_CACHE" "$NAME_CACHE"
     ddc "$@"
     rc=$?
   fi
   if ((rc != 0 && rc != 75)); then
-    rm -f "$BUS_CACHE"
+    rm -f "$BUS_CACHE" "$NAME_CACHE"
   fi
   return $rc
 }
@@ -108,8 +128,13 @@ case $1 in
     [[ -n ${ACTIONS[$name]:-} ]] || { echo "unknown action $name" >&2; exit 2; }
     with_retry setvcp ${ACTIONS[$name]}
     ;;
+  model)
+    [[ -s $NAME_CACHE ]] || detect
+    [[ -s $NAME_CACHE ]] || exit 1
+    cat "$NAME_CACHE"
+    ;;
   *)
-    echo "usage: ddc-dell [--model NAME] state | set CODE VALUE | action NAME" >&2
+    echo "usage: ddc-dell [--model NAME] state | set CODE VALUE | action NAME | model" >&2
     exit 2
     ;;
 esac

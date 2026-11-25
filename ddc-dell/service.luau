@@ -46,11 +46,16 @@ local function poll()
       return
     end
     local fresh = model.buildState(model.parseGetvcp(result.stdout))
-    -- The KVM switch position has no readable DDC value (see lib/model.luau):
-    -- carry the plugin-tracked position through the poll.
+    -- The KVM switch and video swap positions have no readable DDC value
+    -- (see lib/model.luau): carry the plugin-tracked positions through.
     local previous = noctalia.state.get("ddc")
-    if previous and previous.kvm ~= nil then
-      fresh.kvm = previous.kvm
+    if previous then
+      if previous.kvm ~= nil then
+        fresh.kvm = previous.kvm
+      end
+      if previous.swapped ~= nil then
+        fresh.swapped = previous.swapped
+      end
     end
     publish(fresh)
   end)

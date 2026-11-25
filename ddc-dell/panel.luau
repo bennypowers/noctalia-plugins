@@ -1,8 +1,10 @@
 --!nonstrict
--- Control panel: brightness/contrast/volume, mute, colour preset, display
--- mode, input source, and the Dell-specific PIP/PBP section (layout,
--- sub-window input, video swap, experimental KVM USB switch). All writes go
--- through the bundled ddc-dell backend, which serializes the DDC traffic.
+-- Control panel: brightness/contrast/volume sliders, mute, colour preset,
+-- display mode, input source, and the Dell-specific PIP/PBP section
+-- (layout, sub-window input, video swap, experimental KVM USB switch).
+-- Every choice is a settings-style row: label + helper on the left, the
+-- control on the right. All writes go through the bundled ddc-dell backend,
+-- which serializes the DDC traffic.
 
 local model = require("./lib/model.luau")
 
@@ -15,10 +17,7 @@ local state = nil -- latest monitor state (from the service or a refresh)
 local pendingInput = nil -- input value awaiting the confirm step
 local pendingSliders = {} -- key -> value while a slider drag is in flight
 local busy = false
-
--- Forward declaration: control callbacks defined below call back into the
--- current tree once the user commits a change.
-local render
+local monitorName = nil -- full DDC model name for the title (loaded async)
 
 local function run(args, cb)
   if not backend then
@@ -56,9 +55,10 @@ local function refresh()
   run({ "state" }, function(result)
     if result.exitCode == 0 then
       local fresh = model.buildState(model.parseGetvcp(result.stdout))
-      -- buildState has no kvm key (the register reports no state); keep the
-      -- plugin-tracked position across re-reads.
+      -- buildState has no kvm/swapped keys (neither reports state); keep
+      -- the plugin-tracked positions across re-reads.
       fresh.kvm = state and state.kvm
+      fresh.swapped = state and state.swapped
       state = fresh
       busy = false
       render()
@@ -100,102 +100,28 @@ local function doAction(name, label, thenRefresh)
   end)
 end
 
-local function labelsOf(options)
-  local out = {}
-  for index, option in ipairs(options) do
-    out[index] = option.label
-  end
-  return out
-end
-
-local function sliderRow(key, code, label, value)
-  local row = {}
-  row[1] = ui.row({ justify = "space_between", align = "center", gap = 8 }, {
-    ui.label({ text = label, fontSize = 13 }),
-    ui.label({
-      key = "value-" .. key,
-      text = string.format("%d%%", value),
-      fontSize = 13,
-      color = "on_surface_variant",
-    }),
-  })
-  row[2] = ui.slider({
-    key = "slider-" .. key,
-    min = 0,
-    max = 100,
-    step = 1,
-    value = value,
-    onChange = function(raw)
-      pendingSliders[key] = model.clampPercent(raw)
-    end,
-    onDragEnd = function()
-      local v = pendingSliders[key]
-      pendingSliders[key] = nil
-      if v == nil or state[key] == v then
-        return
-      end
-      state[key] = v
-      render()
-      write(code, v, noctalia.tr("panel.write_failed"))
-    end,
-  })
-  return row
-end
-
-local function selectRow(key, label, options, value, onSelect, enabled)
-  local index = model.indexFor(options, value)
-  return ui.row({ justify = "space_between", align = "center", gap = 8 }, {
-    ui.label({ text = label, fontSize = 13, width = 104 }),
-    ui.select({
-      key = "select-" .. key,
-      options = labelsOf(options),
-      selectedIndex = index or 0,
-      flexGrow = 1,
-      enabled = not busy and enabled ~= false,
-      onChange = function(indexStr)
-        local option = options[tonumber(indexStr) + 1]
-        if option then
-          onSelect(option.value)
-        end
-      end,
-    }),
-  })
-end
-
-local function header()
-  return ui.row({ align = "center", justify = "space_between" }, {
-    ui.label({
-      text = noctalia.tr("panel.title"),
-      fontSize = 18,
-      fontWeight = "bold",
-      flexGrow = 1,
-    }),
-    ui.button({ glyph = "x", variant = "ghost", onClick = function()
-      panel.close()
-    end }),
-  })
-end
-
-local function errorBlock()
-  local text
+-- Loads the monitor's full DDC model name for the title (the `monitor`
+-- setting is only a matching substring). Silent: the title keeps the
+-- translated plugin name until this lands; failures keep the last name.
+local function loadMonitorName()
   if not backend then
-    text = noctalia.tr("panel.no_backend")
-  elseif state and state.reason == "ddcutil" then
-    text = noctalia.tr("panel.no_ddcutil")
-  else
-    text = noctalia.tr("panel.no_monitor")
+    return
   end
-  return ui.column({ gap = 10 }, {
-    header(),
-    ui.label({ text = text, fontSize = 14, color = "on_surface_variant" }),
-  })
+  run({ "model" }, function(result)
+    if result.exitCode == 0 then
+      local name = (result.stdout or ""):match("^([^\r\n]+)")
+      if name and name ~= "" then
+        monitorName = name
+        render()
+      end
+    end
+  end)
 end
 
--- The layouts are chip grids rather than selects: the OSD offers a whole
--- family of PIP/PBP modes and the user should see them all at once.
--- `columns` defaults to 2; pass #options for a single row (the PBP ratio
--- chips; needs a full-width card — the half-width card squeezed the glyph
--- chips into ellipsis).
+-- Chip grids for the PIP/PBP layouts: the OSD offers a whole family of
+-- modes and the user should see them all at once. `columns` defaults to 2;
+-- pass #options for a single row (the six PBP chips). The grid takes the
+-- wider share of its settings row.
 local function chipGrid(options, current, onPick, columns)
   local cols = columns or 2
   local rows = {}
@@ -226,135 +152,78 @@ local function chipGrid(options, current, onPick, columns)
     end
     rows[#rows + 1] = ui.row({ gap = 6, justify = "start" }, cells)
   end
-  return ui.column({ gap = 6 }, rows)
+  return ui.column({ gap = 6, flexGrow = 2 }, rows)
 end
 
--- A layout card styled after the control center's device volume cards
--- (surface_container fill, 12px radius, 12px padding, 8px gap):
--- title row plus the group's chip grid.
-local function layoutCard(title, options, current, onPick, columns)
-  return ui.column({
-    fill = "surface_container",
-    radius = 12,
-    padding = 12,
-    gap = 8,
-    flexGrow = 1,
-  }, {
-    ui.label({ text = title, fontSize = 14, fontWeight = "bold" }),
-    chipGrid(options, current, onPick, columns),
-  })
-end
-
-local function pickLayout(s, value)
-  if value == s.pbp then
-    return
+local function labelsOf(options)
+  local out = {}
+  for index, option in ipairs(options) do
+    out[index] = option.label
   end
-  s.pbp = value
-  pendingInput = nil
-  render()
-  -- Layout changes re-hotplug the monitor and drop DDC briefly;
-  -- the poll recovers it.
-  write("E9", value, noctalia.tr("panel.write_failed"), false)
+  return out
 end
 
-local function pipPbpSection(s)
-  local children = {}
-
-  -- No on/off toggle in the header: Off is a chip in the PBP row, so the
-  -- whole section is driven by the chips and the sub-controls below.
-  children[#children + 1] = ui.label({
-    text = noctalia.tr("panel.pip_pbp"),
-    fontSize = 14,
-    fontWeight = "bold",
-  })
-
-  -- Stacked full-width cards: six PBP chips across (Off + five ratios) need
-  -- the full row to keep their glyphs at a legible size (a half-width card
-  -- ellipsizes them).
-  children[#children + 1] = layoutCard(noctalia.tr("panel.pbp_title"), model.pbpOptions, s.pbp, function(value)
-    pickLayout(s, value)
-  end, #model.pbpOptions)
-  children[#children + 1] = layoutCard(noctalia.tr("panel.pip_title"), model.pipPositions, s.pbp, function(value)
-    pickLayout(s, value)
-  end)
-
-  -- The sub-controls are always shown but disabled while PIP/PBP is off
-  -- (they only apply to an active layout); the note below explains which
-  -- state the section is in.
-  local pbpEnabled = s.pbp > 0 and not busy
-
-  children[#children + 1] = selectRow("pbp-input", noctalia.tr("panel.sub_input"), model.inputs, s.pbpInput, function(value)
-    if value == s.pbpInput then
-      return
-    end
-    s.pbpInput = value
-    render()
-    write("E8", value, noctalia.tr("panel.write_failed"))
-  end, s.pbp > 0)
-
-  children[#children + 1] = ui.row({ gap = 8, justify = "center" }, {
-    ui.button({
-      glyph = "arrows-exchange",
-      text = noctalia.tr("panel.video_swap"),
-      variant = "secondary",
-      controlSize = "sm",
-      enabled = pbpEnabled,
-      onClick = function()
-        doAction("swap", noctalia.tr("panel.video_swap"))
+-- Settings-style select row: label + helper on the left, the select on
+-- the right. ui.select reports a 0-based index string.
+local function selectSettingRow(key, label, help, options, value, onSelect, enabled)
+  return ui.row({ justify = "space_between", align = "start", gap = 12 }, {
+    ui.column({ gap = 2, flexGrow = 1 }, {
+      ui.label({ text = label, fontSize = 14, fontWeight = "bold" }),
+      ui.label({ text = help, fontSize = 12, color = "on_surface_variant" }),
+    }),
+    ui.select({
+      key = "select-" .. key,
+      options = labelsOf(options),
+      selectedIndex = model.indexFor(options, value) or 0,
+      width = 160,
+      enabled = not busy and enabled ~= false,
+      onChange = function(indexStr)
+        local option = options[tonumber(indexStr) + 1]
+        if option then
+          onSelect(option.value)
+        end
       end,
     }),
   })
-
-  if kvmEnabled then
-    -- The E7 register reports no state, so the helper text shows the
-    -- output the plugin last set (Unknown before the first flip); the
-    -- service carries the tracked position through its polls.
-    local output = s.kvm == nil and noctalia.tr("panel.kvm_unknown") or model.kvmOutputs[s.kvm + 1]
-    children[#children + 1] = ui.row({ justify = "space_between", align = "center", gap = 8 }, {
-      ui.label({
-        text = noctalia.tr("panel.kvm_switch") .. ": " .. output,
-        fontSize = 13,
-        flexGrow = 1,
-      }),
-      ui.toggle({
-        key = "toggle-kvm",
-        checked = s.kvm == 1,
-        enabled = pbpEnabled,
-        tooltip = noctalia.tr("panel.kvm_tooltip"),
-        onChange = function(value)
-          local on = value == "true"
-          if (s.kvm == 1) == on then
-            return
-          end
-          s.kvm = on and 1 or 0
-          render()
-          -- Publish the tracked position so the service's next poll carries
-          -- it forward (it is not part of the monitor read).
-          noctalia.state.set("ddc", s)
-          doAction("kvm", noctalia.tr("panel.kvm_switch"))
-        end,
-      }),
-    })
-  end
-  children[#children + 1] = ui.label({
-    text = s.pbp > 0 and noctalia.tr("panel.pbp_note") or noctalia.tr("panel.pbp_off_note"),
-    fontSize = 11,
-    color = "on_surface_variant",
-  })
-
-  return children
 end
 
+-- Builds the whole panel top-to-bottom in visual order; every row is
+-- written inline so a change to one row stays a local diff.
 function render()
+  local title = monitorName or noctalia.tr("panel.title")
   if not backend or not state or not state.ok then
-    panel.render(errorBlock())
+    local text
+    if not backend then
+      text = noctalia.tr("panel.no_backend")
+    elseif state and state.reason == "ddcutil" then
+      text = noctalia.tr("panel.no_ddcutil")
+    else
+      text = noctalia.tr("panel.no_monitor")
+    end
+    panel.render(ui.column({ gap = 10 }, {
+      ui.row({ align = "center", justify = "space_between" }, {
+        ui.label({ text = title, fontSize = 18, fontWeight = "bold", flexGrow = 1 }),
+        ui.button({ glyph = "x", variant = "ghost", onClick = function()
+          panel.close()
+        end }),
+      }),
+      ui.label({ text = text, fontSize = 14, color = "on_surface_variant" }),
+    }))
     return
   end
 
   local s = state
   local children = {}
-  children[#children + 1] = header()
 
+  -- Header
+  children[#children + 1] = ui.row({ align = "center", justify = "space_between" }, {
+    ui.label({ text = title, fontSize = 18, fontWeight = "bold", flexGrow = 1 }),
+    ui.button({ glyph = "x", variant = "ghost", onClick = function()
+      panel.close()
+    end }),
+  })
+
+  -- Active input subtitle
   children[#children + 1] = ui.label({
     text = string.format("%s · %s", noctalia.tr("panel.input_short"), model.labelFor(model.inputs, s.input))
         .. (s.pbp > 0 and " · " .. noctalia.tr("panel.pip_pbp_on") or ""),
@@ -364,25 +233,125 @@ function render()
 
   children[#children + 1] = ui.separator({})
 
-  for _, spec in ipairs({
-    { key = "brightness", code = "10", label = noctalia.tr("panel.brightness") },
-    { key = "contrast", code = "12", label = noctalia.tr("panel.contrast") },
-    { key = "volume", code = "62", label = noctalia.tr("panel.volume") },
-  }) do
-    if s[spec.key] >= 0 then
-      for _, node in ipairs(sliderRow(spec.key, spec.code, spec.label, s[spec.key])) do
-        children[#children + 1] = node
-      end
-    end
+  -- Brightness
+  if s.brightness >= 0 then
+    children[#children + 1] = ui.row({ justify = "space_between", align = "center", gap = 12 }, {
+      ui.column({ gap = 2 }, {
+        ui.label({ text = noctalia.tr("panel.brightness"), fontSize = 14, fontWeight = "bold" }),
+        ui.label({
+          key = "value-brightness",
+          text = string.format("%d%%", s.brightness),
+          fontSize = 12,
+          color = "on_surface_variant",
+        }),
+      }),
+      ui.slider({
+        key = "slider-brightness",
+        min = 0,
+        max = 100,
+        step = 1,
+        value = s.brightness,
+        flexGrow = 1,
+        onChange = function(raw)
+          pendingSliders.brightness = model.clampPercent(raw)
+        end,
+        onDragEnd = function()
+          local v = pendingSliders.brightness
+          pendingSliders.brightness = nil
+          if v == nil or s.brightness == v then
+            return
+          end
+          s.brightness = v
+          render()
+          write("10", v, noctalia.tr("panel.write_failed"))
+        end,
+      }),
+    })
   end
 
-  if s.mute >= 0 then
-    children[#children + 1] = ui.row({ justify = "space_between", align = "center" }, {
-      ui.label({ text = noctalia.tr("panel.mute"), fontSize = 13 }),
-      ui.toggle({
+  -- Contrast
+  if s.contrast >= 0 then
+    children[#children + 1] = ui.row({ justify = "space_between", align = "center", gap = 12 }, {
+      ui.column({ gap = 2 }, {
+        ui.label({ text = noctalia.tr("panel.contrast"), fontSize = 14, fontWeight = "bold" }),
+        ui.label({
+          key = "value-contrast",
+          text = string.format("%d%%", s.contrast),
+          fontSize = 12,
+          color = "on_surface_variant",
+        }),
+      }),
+      ui.slider({
+        key = "slider-contrast",
+        min = 0,
+        max = 100,
+        step = 1,
+        value = s.contrast,
+        flexGrow = 1,
+        onChange = function(raw)
+          pendingSliders.contrast = model.clampPercent(raw)
+        end,
+        onDragEnd = function()
+          local v = pendingSliders.contrast
+          pendingSliders.contrast = nil
+          if v == nil or s.contrast == v then
+            return
+          end
+          s.contrast = v
+          render()
+          write("12", v, noctalia.tr("panel.write_failed"))
+        end,
+      }),
+    })
+  end
+
+  -- Volume; the mute switch rides at the end of the row (a standalone row
+  -- only if the monitor reports mute but no volume slider)
+  if s.volume >= 0 or s.mute >= 0 then
+    local cells = {
+      ui.column({ gap = 2 }, {
+        ui.label({
+          text = s.volume >= 0 and noctalia.tr("panel.volume") or noctalia.tr("panel.mute"),
+          fontSize = 14,
+          fontWeight = "bold",
+        }),
+        ui.label({
+          key = "value-volume",
+          text = s.volume >= 0 and string.format("%d%%", s.volume) or noctalia.tr("panel.mute_help"),
+          fontSize = 12,
+          color = "on_surface_variant",
+        }),
+      }),
+    }
+    if s.volume >= 0 then
+      cells[#cells + 1] = ui.slider({
+        key = "slider-volume",
+        min = 0,
+        max = 100,
+        step = 1,
+        value = s.volume,
+        flexGrow = 1,
+        onChange = function(raw)
+          pendingSliders.volume = model.clampPercent(raw)
+        end,
+        onDragEnd = function()
+          local v = pendingSliders.volume
+          pendingSliders.volume = nil
+          if v == nil or s.volume == v then
+            return
+          end
+          s.volume = v
+          render()
+          write("62", v, noctalia.tr("panel.write_failed"))
+        end,
+      })
+    end
+    if s.mute >= 0 then
+      cells[#cells + 1] = ui.toggle({
         key = "toggle-mute",
         checked = s.mute == 1,
         enabled = not busy,
+        tooltip = noctalia.tr("panel.mute_help"),
         onChange = function(value)
           local muted = value == "true"
           if (s.mute == 1) == muted then
@@ -392,14 +361,16 @@ function render()
           render()
           write("8D", s.mute, noctalia.tr("panel.mute"))
         end,
-      }),
-    })
+      })
+    end
+    children[#children + 1] = ui.row({ justify = "space_between", align = "center", gap = 12 }, cells)
   end
 
   children[#children + 1] = ui.separator({})
 
+  -- Colour preset
   if s.preset >= 0 then
-    children[#children + 1] = selectRow("preset", noctalia.tr("panel.preset"), model.presets, s.preset, function(value)
+    children[#children + 1] = selectSettingRow("preset", noctalia.tr("panel.preset"), noctalia.tr("panel.preset_help"), model.presets, s.preset, function(value)
       if value == s.preset then
         return
       end
@@ -408,8 +379,10 @@ function render()
       write("14", value, noctalia.tr("panel.preset"))
     end)
   end
+
+  -- Display mode
   if s.mode >= 0 then
-    children[#children + 1] = selectRow("mode", noctalia.tr("panel.mode"), model.modes, s.mode, function(value)
+    children[#children + 1] = selectSettingRow("mode", noctalia.tr("panel.mode"), noctalia.tr("panel.mode_help"), model.modes, s.mode, function(value)
       if value == s.mode then
         return
       end
@@ -419,7 +392,18 @@ function render()
     end)
   end
 
+  -- Input source (switching away from the current input asks for a confirm
+  -- first — it blanks the screen)
   if s.input >= 0 then
+    -- The select row stays visible while a switch is pending (it still
+    -- shows the active input); the confirm block appears beneath it.
+    children[#children + 1] = selectSettingRow("input", noctalia.tr("panel.input"), noctalia.tr("panel.input_help"), model.inputs, s.input, function(value)
+      if value == s.input then
+        return
+      end
+      pendingInput = value
+      render()
+    end)
     if pendingInput ~= nil then
       children[#children + 1] = ui.column({
         gap = 6,
@@ -455,21 +439,126 @@ function render()
           }),
         }),
       })
-    else
-      children[#children + 1] = selectRow("input", noctalia.tr("panel.input"), model.inputs, s.input, function(value)
-        if value == s.input then
-          return
-        end
-        pendingInput = value
-        render()
-      end)
     end
   end
 
   children[#children + 1] = ui.separator({})
 
-  for _, node in ipairs(pipPbpSection(s)) do
-    children[#children + 1] = node
+  -- No on/off toggle in the header: Off is a chip in the PBP row, so the
+  -- whole section is driven by the chip grids and the sub-controls below.
+  children[#children + 1] = ui.label({
+    text = noctalia.tr("panel.pip_pbp"),
+    fontSize = 14,
+    fontWeight = "bold",
+  })
+
+  -- Layout pick shared by the two grids: layout changes re-hotplug the
+  -- monitor and drop DDC briefly, so no immediate re-read; the poll
+  -- recovers it.
+  local function pickLayout(value)
+    if value == s.pbp then
+      return
+    end
+    s.pbp = value
+    pendingInput = nil
+    render()
+    write("E9", value, noctalia.tr("panel.write_failed"), false)
+  end
+
+  -- Picture-By-Picture layout (six chips across in a single row)
+  children[#children + 1] = ui.row({ justify = "space_between", align = "start", gap = 12 }, {
+    ui.column({ gap = 2, flexGrow = 1 }, {
+      ui.label({ text = noctalia.tr("panel.pbp_title"), fontSize = 14, fontWeight = "bold" }),
+      ui.label({ text = noctalia.tr("panel.pbp_help"), fontSize = 12, color = "on_surface_variant" }),
+    }),
+    chipGrid(model.pbpOptions, s.pbp, pickLayout, #model.pbpOptions),
+  })
+
+  -- Picture-In-Picture position (2x2)
+  children[#children + 1] = ui.row({ justify = "space_between", align = "start", gap = 12 }, {
+    ui.column({ gap = 2, flexGrow = 1 }, {
+      ui.label({ text = noctalia.tr("panel.pip_title"), fontSize = 14, fontWeight = "bold" }),
+      ui.label({ text = noctalia.tr("panel.pip_help"), fontSize = 12, color = "on_surface_variant" }),
+    }),
+    chipGrid(model.pipPositions, s.pbp, pickLayout),
+  })
+
+  -- The sub-controls are always shown but disabled while PIP/PBP is off
+  -- (they only apply to an active layout); the note below explains which
+  -- state the section is in.
+  local pbpEnabled = s.pbp > 0 and not busy
+
+  -- Sub-window input
+  children[#children + 1] = selectSettingRow("pbp-input", noctalia.tr("panel.sub_input"), noctalia.tr("panel.sub_input_help"), model.inputs, s.pbpInput, function(value)
+    if value == s.pbpInput then
+      return
+    end
+    s.pbpInput = value
+    render()
+    write("E8", value, noctalia.tr("panel.write_failed"))
+  end, s.pbp > 0)
+
+  -- Video swap: the crossed-or-not state is real but no VCP reports it, so
+  -- like the KVM switch the plugin tracks the position in shared state and
+  -- the switch reflects the last swap made here.
+  children[#children + 1] = ui.row({ justify = "space_between", align = "center", gap = 12 }, {
+    ui.column({ gap = 2, flexGrow = 1 }, {
+      ui.label({ text = noctalia.tr("panel.video_swap"), fontSize = 14, fontWeight = "bold" }),
+      ui.label({ text = noctalia.tr("panel.video_swap_help"), fontSize = 12, color = "on_surface_variant" }),
+    }),
+    ui.toggle({
+      key = "toggle-swap",
+      checked = s.swapped == true,
+      enabled = pbpEnabled,
+      tooltip = noctalia.tr("panel.video_swap_tooltip"),
+      onChange = function(value)
+        local swapped = value == "true"
+        if (s.swapped == true) == swapped then
+          return
+        end
+        s.swapped = swapped
+        render()
+        -- Publish the tracked position so the service's next poll carries
+        -- it forward (it is not part of the monitor read).
+        noctalia.state.set("ddc", s)
+        doAction("swap", noctalia.tr("panel.video_swap"))
+      end,
+    }),
+  })
+
+  if kvmEnabled then
+    -- The E7 register reports no state, so the label shows the output the
+    -- plugin last set (Unknown before the first flip); the service carries
+    -- the tracked position through its polls.
+    local output = s.kvm == nil and noctalia.tr("panel.kvm_unknown") or model.kvmOutputs[s.kvm + 1]
+    children[#children + 1] = ui.row({ justify = "space_between", align = "center", gap = 12 }, {
+      ui.column({ gap = 2, flexGrow = 1 }, {
+        ui.label({ text = noctalia.tr("panel.kvm_switch"), fontSize = 14, fontWeight = "bold" }),
+        ui.label({
+          text = noctalia.tr("panel.kvm_switch_help", { output = output }),
+          fontSize = 12,
+          color = "on_surface_variant",
+        }),
+      }),
+      ui.toggle({
+        key = "toggle-kvm",
+        checked = s.kvm == 1,
+        enabled = pbpEnabled,
+        tooltip = noctalia.tr("panel.kvm_tooltip"),
+        onChange = function(value)
+          local on = value == "true"
+          if (s.kvm == 1) == on then
+            return
+          end
+          s.kvm = on and 1 or 0
+          render()
+          -- Publish the tracked position so the service's next poll carries
+          -- it forward (it is not part of the monitor read).
+          noctalia.state.set("ddc", s)
+          doAction("kvm", noctalia.tr("panel.kvm_switch"))
+        end,
+      }),
+    })
   end
 
   panel.render(ui.scroll({ gap = 10, padding = 16 }, children))
@@ -488,6 +577,8 @@ noctalia.state.watch("ddc", function(value)
   render()
 end)
 
+loadMonitorName()
+
 function onOpen()
   local value = noctalia.state.get("ddc")
   if value and value.ok then
@@ -496,6 +587,7 @@ function onOpen()
     state = value
   end
   pendingInput = nil
+  loadMonitorName()
   render()
 end
 

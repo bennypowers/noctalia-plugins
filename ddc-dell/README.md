@@ -9,14 +9,16 @@ codes human-readable and pleasant to use.
 
 - **Bar widget** — monitor glyph with the current brightness; scroll the wheel over it to adjust brightness (5% per detent); click opens the panel.
 - **Panel**
-  - Sliders: brightness, contrast, volume (committed on release)
-  - Mute toggle
-  - Selects: colour preset, display mode, input source (switching away from the
-    current input asks for a confirm first — it blanks the screen)
-  - **PIP/PBP section** with stacked full-width cards: a *Picture-By-Picture*
-    chip row (Off plus the five ratios — Off is a chip, not a header switch)
-    and *Picture-In-Picture* position chips (glyph + tooltip where the Tabler
-    set has a real PIP icon), plus sub-window input, **Video Swap**, and an
+  - Sliders: brightness, contrast, volume (committed on release), each as a
+    label + value row with the slider on the right; the mute switch sits at
+    the end of the volume row
+  - Select rows: colour preset, display mode, input source (switching away
+    from the current input asks for a confirm first — it blanks the screen)
+  - **PIP/PBP section** with settings-style rows (label + helper text on the
+    left, control on the right): a *Picture-By-Picture* row (Off plus the
+    five ratios as chips — Off is a chip, not a header switch) and a
+    *Picture-In-Picture* row (2×2 chips, with a glyph where the Tabler set
+    has a real PIP icon), plus sub-window input, a **Video Swap** switch, and an
     experimental **KVM USB switch** with a helper label showing which output
     (USB-C / Thunderbolt) the keyboard/mouse are routed to
 
@@ -41,7 +43,7 @@ The firmware advertises ten `0xE9` values. `0x24` (PBP 50/50) and `0x27`
 (rabfulton/Dell_U4025QW_Controller); the remaining ratios (`0x28` 80/20,
 `0x29` 25/75, `0x2A` 75/25) and `0x21` (PIP top-right, small) were confirmed by
 the user watching the screen. All six ratios plus the PIP positions are offered
-as a chip grid. The remaining advertised PIP codes (`0x22`/`0x01`/`0x02`) were
+as chip grids. The remaining advertised PIP codes (`0x22`/`0x01`/`0x02`) were
 refused on first probe but the same session's ratio refusals later turned out
 to be transient, so they are offered as *assumed* PIP bottom-right /
 bottom-left / top-left small (tooltip-marked); the large PIP variants have no
